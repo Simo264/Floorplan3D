@@ -15,22 +15,22 @@ static inline glm::dvec2 CGAL_to_glm(const Point2& p)
 // Returns true if the CGAL point M lies on segment (A, B), including at the endpoints.
 static bool point_on_segment(const Point2& A, const Point2& B, const Point2& M)
 {
-  if (CGAL::collinear(A, B, M) == false) 
+  if (CGAL::collinear(A, B, M) == false)
     return false;
   return CGAL::collinear_are_ordered_along_line(A, M, B);
 }
 
-Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices, 
+Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices,
                               const std::vector<Edge>& edges)
 {
   // Convert GraphEdges to CGAL Segment2
-  
+
   struct TaggedSegment { Segment2 segment; SegmentLayer layer; };
 
   auto tagged = std::vector<TaggedSegment>{};
   tagged.reserve(edges.size());
   for (const auto& e : edges)
-  { 
+  {
     const auto& p1 = vertices[e.v1];
     const auto& p2 = vertices[e.v2];
     Point2 A = glm_to_cgal(p1);
@@ -40,7 +40,7 @@ Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices,
   }
 
   // Insert all segments. CGAL resolves all T-junctions and intersections internally
-  
+
   auto arr = Arrangement{};
 
   auto raw_segments = std::vector<Segment2>{};
@@ -51,7 +51,7 @@ Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices,
   CGAL::insert(arr, raw_segments.begin(), raw_segments.end());
 
   // Propagate LayerType onto each halfedge.
-   
+
   for (auto eit = arr.edges_begin(); eit != arr.edges_end(); ++eit)
   {
     const Point2& src = eit->source()->point();
@@ -68,7 +68,7 @@ Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices,
       // the priority is DOOR > WINDOW > WALL > NONE
       if (point_on_segment(A, B, mid))
       {
-        if (static_cast<i32>(ts.layer) > static_cast<i32>(best_layer)) 
+        if (static_cast<i32>(ts.layer) > static_cast<i32>(best_layer))
           best_layer = ts.layer;
       }
     }
@@ -85,16 +85,16 @@ std::vector<Face> extract_faces(const Arrangement& arr)
   auto faces = std::vector<Face>{};
   for (auto fit = arr.faces_begin(); fit != arr.faces_end(); ++fit)
   {
-    if (fit->is_unbounded()) 
-      continue; 
-    if (!fit->has_outer_ccb()) 
+    if (fit->is_unbounded())
+      continue;
+    if (!fit->has_outer_ccb())
       continue;
 
     auto face = Face{};
 
     auto curr = fit->outer_ccb();
     auto first = curr;
-    do 
+    do
     {
       face.vertices.push_back(CGAL_to_glm(curr->source()->point()));
       face.edge_layers.push_back(curr->data());
@@ -111,12 +111,12 @@ std::vector<Face> extract_faces(const Arrangement& arr)
   return faces;
 }
 
-FaceType classify_face(const Face& face) 
+FaceType classify_face(const Face& face)
 {
   auto wall_count = 0u;
   auto door_count = 0u;
   auto window_count = 0u;
-  for (SegmentLayer layer : face.edge_layers) 
+  for (SegmentLayer layer : face.edge_layers)
   {
     if (layer == SegmentLayer::Wall)         wall_count++;
     else if (layer == SegmentLayer::Door)    door_count++;
@@ -126,18 +126,18 @@ FaceType classify_face(const Face& face)
   auto total_edges = static_cast<u32>(face.edge_layers.size());
 
   // Door face
-  
-  if (total_edges == 4 && wall_count == 2 && door_count == 2) 
+
+  if (total_edges == 4 && wall_count == 2 && door_count == 2)
     return FaceType::Door;
 
   // Window face
-  
+
   if (total_edges == 4 && wall_count == 2 && window_count == 2)
     return FaceType::Window;
 
   // Wall face
 
-  if (wall_count == total_edges) 
+  if (wall_count == total_edges)
     return FaceType::Wall;
 
   // Floor face

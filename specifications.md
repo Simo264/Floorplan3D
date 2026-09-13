@@ -1,10 +1,11 @@
 ## Introduction
 
-The goal of the project is as follows: to create a C++ program that takes as input a 2D CAD model, in DXF format, of a plan of a room/apartment with walls, windows, doors, and to create as a final result a 3D model of the room/apartment.
+The goal of the project is to create a C++ program that takes as input a 2D CAD model, in DXF format, of a plan of a room/apartment with walls, windows, doors, and to create as a final result a 3D mesh of the room/apartment.
 
 The model will be exported in GLTF format with attributes: position (xyz) normal (xyz) texture coordinates (uv). The GLTF model shall not contain materials.
 
-Once the model is exported, we proceed with the photorealistic rendering phase in Blender. Blender is used for rendering only. The idea is to use Blender Python API (BPY) to define the scene, materials and rendering parameters and call the script from CLI like this: `blender -b -P render_scene.py`.
+Once the gltf file has been exported, we run the python script `generate_blender_scene.py` to generate the scene in Blender.
+At this point, we can import the mesh into Blender, set the camera, lights, materials, and other parameters, and proceed with rendering from the GUI.
 
 ## From plan to mesh
 
@@ -64,137 +65,40 @@ We are ready to export in GLTF format.
   - Planar Straight-Line Graph with `CGAL`
   - Polygon triangulation with `poly2tri`
 
-## Definition of parameters
-
-The C++ program reads all its parameters from a **JSON configuration file**.  
-Each CAD model requires its own configuration file, as parameters may vary depending on the drawing scale, geometry complexity, and desired output quality. Example:
-
-```json
-{
-  "dxf_filename": "draftperson_Floor_Plan.dxf",
-  "unit_scale": 0.01,
+  ## Definition of parameters
   
-  "ceil_height": 3.5,
-  "door_width": 1.2,
-  "door_height": 2.1,
+  The C++ program reads all its parameters from a **JSON configuration file**.
+  Each CAD model requires its own configuration file, as parameters may vary depending on the drawing scale, geometry complexity, and desired output quality. Example:
   
-  "window_sill_height": 0.25,
-  "window_height": 3.3,
-  "window_width": 5.0,
-
-  "snap_eps": 1e-2,
-  "cluster_num_samples": 15,
-  "cluster_eps": 2,
-
-  "floor_texture_scaling": 2.0,
-  "wall_texture_scaling": 2.0
-}
-```
-
-- *dxf_filename*: path to the input DXF file.
-- *unit_scale*: conversion factor from DXF drawing units to meters (e.g., 0.01 if the drawing is in centimeters).
-- *ceil_height*: height of the ceiling in meters.
-- *door_width*, door_height: target dimensions for doors.
-- *window_sill_height*: distance from floor to window sill.
-- *window_height*, window_width: target dimensions for windows.
-- *snap_eps*: tolerance for vertex snapping (in meters).
-- *cluster_num_samples*: minimum points for DBSCAN clustering.
-- *cluster_eps*: maximum distance for DBSCAN clustering.
-- *floor_texture_scaling*, wall_texture_scaling: scaling factors for UV coordinates to repeat textures.
-
-During the geometry processing phase, the calculation engine does not apply a static scaling factor, but dynamically calculates the ratio of the width detected in the DXF to the desired target width to bring each gap back to the exact required geometric measurement, while preserving the midpoint (centering) of the original opening.
-
-After the mesh is exported in GLTF format (with accompanying .bin file), the program also generates an openings.json file containing metadata for each detected opening:
-```json
-{
-  "openings": [
-    {
-      "center": [0,0,0],
-      "height": 2,
-      "rotation_z": 3.14,
-      "thickness": 0.9,
-      "type": "Door",
-      "width": 1.3
-    }
-  ]
-}
-```
-
-This file provides the position, orientation, dimensions, and type of each opening, and is later used by the Blender rendering script to place 3D door/window assets accurately.
-
-## Photorealistic rendering
-
-The final 3D model is exported as a GLTF file containing vertex positions, normals, and texture coordinates (UV).  
-It does not include any material definition inside the file.
-
-The photorealistic rendering pipeline is implemented using Blender and its Python API (bpy).  
-The render engine used is Cycles, which provides physically‑based ray tracing for high‑quality results.
-
-The setup process is driven by a `blender_config.json` file, which centralises all scene parameters, assets, and material paths. Below is an example of its structure:
-
-```json
-{
-  "samples": 128,
-  "resolution_x": 1280,
-  "resolution_y": 720,
-  "use_denoising" : true,
-  "render_engine": "CYCLES",
-  "output_blender": "out/scene.blend",
-
-  "model_path": "out/draftperson_Floor_Plan.gltf",
-  "opening_placeholders": "out/draftperson_Floor_Plan_openings.json",
-  "door_asset": "assets/Wooden_Door.glb",
-  "window_asset": "assets/Classical_Window.glb",
-  "hdri_path": "HDRIs/grasslands_sunset_4k.hdr",
-  "hdri_intensity": 1.0,
-
-  "floor_material": {
-    "albedo": "materials/patio_tiles/patio_tiles_diff_1k.jpg",
-    "base_color": [0.8, 0.8, 0.8],
-    "normal": "...",
-    "normal_strength": 1.5,
-    "roughness": "...",
-    "roughness_value": 0.5,
-    "metallic": "...",
-    "metallic_value": 0.0,
-    "displacement": "...",
-    "disp_scale": 0.05,
-    "ao": "...",
-    "ao_mix_factor": 1.0,
-    "arm": "..."
-  },
-
-  "wall_and_ceil_material": {
-    "albedo": "materials/beige_wall/beige_wall_001_diff_1k.jpg",
-    "base_color": [0.8, 0.8, 0.8],
-    "normal": "...",
-    "normal_strength": 1.5,
-    "metallic": "",
-    "metallic_value": 0.0,
-    "roughness": "...",
-    "roughness_value": 0.5,
-    "displacement": "...",
-    "disp_scale": 0.05,
-    "ao": "...",
-    "ao_mix_factor": 1.0,
-    "arm": "..."
+  ```json
+  {
+    "dxf_filename": "draftperson_Floor_Plan.dxf",
+    "unit_scale": 0.01,
+    
+    "ceil_height": 3.5,
+    "door_width": 1.2,
+    "door_height": 2.1,
+    
+    "window_sill_height": 0.25,
+    "window_height": 3.3,
+    "window_width": 5.0,
+  
+    "snap_eps": 1e-2,
+    "cluster_num_samples": 15,
+    "cluster_eps": 2,
+  
+    "floor_texture_scaling": 2.0,
+    "wall_texture_scaling": 2.0
   }
-}
-```
-
-The render engine defaults to CYCLES to achieve photorealism. All rendering parameters (samples, resolution, denoising) are taken directly from this file.
-
-The dedicated Python script (render_scene.py) reads blender_config.json and performs the following operations:
-
-1. imports the GLTF mesh located at model_path
-2. reads the opening_placeholders file (i.e., the openings.json generated by the C++ program) and builds a list of OpeningInfo. For each entry, it instantiates the corresponding asset (door_asset or window_asset) with the exact position, rotation, and scale computed during the C++ processing phase.
-3. assigns the specified PBR textures (albedo, normal, roughness, metallic, displacement, AO, ARM) to the correct material slots, using the GLTF material names as keys.
-4. sets up the environment lighting using the provided HDRI and intensity.
-
-
-This script does not produce a final image directly. Instead, it saves a complete Blender project file (.blend) at the path specified by output_blender. This gives the user the flexibility to open the scene in Blender GUI, fine‑tune camera angles, add/adjust lights, and tweak any material settings before launching the final high‑quality render manually.
-
-The script is invoked from the command line as follows:
-```bash
-blender -b -P generate_blender_scene.py
-```
+  ```
+  
+  - *dxf_filename*: path to the input DXF file.
+  - *unit_scale*: conversion factor from DXF drawing units to meters (e.g., 0.01 if the drawing is in centimeters).
+  - *ceil_height*: height of the ceiling in meters.
+  - *door_width*, door_height: target dimensions for doors.
+  - *window_sill_height*: distance from floor to window sill.
+  - *window_height*, window_width: target dimensions for windows.
+  - *snap_eps*: tolerance for vertex snapping (in meters).
+  - *cluster_num_samples*: minimum points for DBSCAN clustering.
+  - *cluster_eps*: maximum distance for DBSCAN clustering.
+  - *floor_texture_scaling*, wall_texture_scaling: scaling factors for UV coordinates to repeat textures.

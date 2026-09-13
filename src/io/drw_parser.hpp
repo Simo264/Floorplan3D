@@ -5,14 +5,17 @@
 #include <libdxfrw.h>
 #include <drw_interface.h>
 
-class DRWParser : public DRW_Interface 
+class DRWParser : public DRW_Interface
 {
-public: 
+public:
+  DRWParser(bool verbose) : m_verbose(verbose) {}
+
+
   virtual void addLine(const DRW_Line& data) override;
   virtual void addLWPolyline(const DRW_LWPolyline& data) override;
   virtual void addArc(const DRW_Arc& data) override;
-  virtual void addInsert([[maybe_unused]]const DRW_Insert& data) override;
-  virtual void addBlock([[maybe_unused]]const DRW_Block& data) override;
+  virtual void addInsert(const DRW_Insert& data) override;
+  virtual void addBlock(const DRW_Block& data) override;
   virtual void endBlock() override;
 
   virtual void addHeader([[maybe_unused]]const DRW_Header* data) override {}
@@ -39,7 +42,7 @@ public:
   virtual void addViewport([[maybe_unused]] const DRW_Viewport& data) override {}
   virtual void addImage([[maybe_unused]] const DRW_Image* data) override {}
   virtual void linkImage([[maybe_unused]] const DRW_ImageDef* data) override {}
-  
+
   virtual void addTextStyle([[maybe_unused]] const DRW_Textstyle& data) override {}
   virtual void addLType([[maybe_unused]] const DRW_LType& data) override {}
   virtual void addDimStyle([[maybe_unused]] const DRW_Dimstyle& data) override {}
@@ -67,9 +70,19 @@ public:
 
   void remove_duplicate_segments(std::vector<Segment>& segments);
 
-  std::vector<Segment> walls;
-  std::vector<Segment> doors;
-  std::vector<Segment> windows;
+  std::vector<Segment> walls, doors, windows;
 private:
+  bool m_verbose;
+
+  struct DoorBlockInfo { f64 radius; };
+
+  // Important: When you read data inside a block, those vertices are in local space.
+  // Inside the addInsert call you need to transform those vertices into world spaces.
+  // Otherwise, if the primitives are not inside any blocks it means that their vertices are already in world space.
+  std::string m_current_block_name{};
+  bool m_is_parsing_block = false;
+  std::map<std::string, std::vector<Segment>> m_block_vertices{};
+  std::map<std::string, DoorBlockInfo> m_block_door_info{};
+
   SegmentLayer classify_layer(std::string_view name);
 };

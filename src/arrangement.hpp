@@ -12,12 +12,11 @@ using Traits   = CGAL::Arr_segment_traits_2<Kernel>;
 using Point2   = Traits::Point_2;
 using Segment2 = Traits::X_monotone_curve_2;
 
-using Dcel        = CGAL::Arr_extended_dcel<Traits, int, SegmentLayer, int>;
+using Dcel        = CGAL::Arr_extended_dcel<Traits, i32, SegmentLayer, i32>;
 using Arrangement = CGAL::Arrangement_2<Traits, Dcel>;
 
-Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices,
-                              const std::vector<Edge>& edges);
+Arrangement build_arrangement(const std::vector<glm::dvec2>& vertices, const std::vector<Edge>& edges);
 
-std::vector<Face> extract_faces(const Arrangement& arr); 
+std::vector<Face> extract_faces(const Arrangement& arr);
 
 FaceType classify_face(const Face& face);

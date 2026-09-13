@@ -8,226 +8,146 @@
 #include <stdexcept>
 #include <vector>
 #include <cstdio>
+#include <print>
 
 #include <glm/ext/vector_float4.hpp>
-#include <glm/glm.hpp> 
+#include <glm/glm.hpp>
 
-#include "geometry.hpp"
 #include "graphics/static_mesh.hpp"
-#include "dump.hpp"
-#include "globals.hpp"
 #include "io/drw_parser.hpp"
-#include "log.hpp"
 #include "types.hpp"
+#include "misc.hpp"
 
-ReconstructionStage next_stage(ReconstructionStage stage) 
+#include "dbscan.h"
+
+
+ParsingResult parse_dxf(bool verbose, const std::filesystem::path& file, f64 unit_scale)
 {
-  switch (stage) 
+  auto parser = DRWParser{ verbose };
+  auto dxf = dxfRW(file.string().c_str());
+  if (!dxf.read(&parser, false))
+    throw std::runtime_error(std::format("Error reading DXF file `{}` (code: {})", file.string(), static_cast<i32>(dxf.getError())));
+
+  auto doors_before = parser.doors.size();
+  parser.remove_duplicate_segments(parser.doors);
+  auto doors_after = parser.doors.size();
+  auto doors_removed = doors_before - doors_after;
+  auto total_segments = parser.walls.size() + parser.doors.size() + parser.windows.size();
+
+  if (doors_removed > 0)
+    std::println("- removed {} duplicate door segments", doors_removed);
+
+  std::println("- number of wall segments: {}", parser.walls.size());
+  std::println("- number of door segments: {}", parser.doors.size());
+  std::println("- number of window segments: {}", parser.windows.size());
+  std::println("- total segments: {}", total_segments);
+  std::println("- total vertices: {}", total_segments * 2);
+
+  normalize_segments(unit_scale, parser.walls);
+  normalize_segments(unit_scale, parser.doors);
+  normalize_segments(unit_scale, parser.windows);
+  center_mesh(parser.walls, parser.doors, parser.windows);
+
+  auto result = ParsingResult{};
+  result.walls = std::move(parser.walls);
+  result.doors = std::move(parser.doors);
+  result.windows = std::move(parser.windows);
+  return result;
+}
+
+SnappingResult vertex_snapping(const std::vector<Segment>& segments, f64 snap_eps)
+{
+  auto hash = SpatialHash{ snap_eps };
+  auto edges = std::vector<Edge>{};
+  for (const auto& seg : segments)
   {
-    case ReconstructionStage::PrimitivesExtraction:  return ReconstructionStage::VertexSnapping;
-    case ReconstructionStage::VertexSnapping:        return ReconstructionStage::ClustersExtraction;
-    case ReconstructionStage::ClustersExtraction:    return ReconstructionStage::GapsReconstruction;
-    case ReconstructionStage::GapsReconstruction:    return ReconstructionStage::FacesExtraction;
-    case ReconstructionStage::FacesExtraction:       return ReconstructionStage::BuildMesh;
-    case ReconstructionStage::BuildMesh:             return ReconstructionStage::RenderMesh;
-    default:                                          return ReconstructionStage::None;
+    auto v1 = hash.snap(seg.start);
+    auto v2 = hash.snap(seg.end);
+    if (v1 != v2)
+      edges.push_back(Edge{ v1, v2, seg.layer });
+  }
+
+  auto result = SnappingResult{};
+  result.hash = std::move(hash);
+  result.edges = std::move(edges);
+  return result;
+}
+
+void doors_reconstruction(std::vector<Segment>& doors, SpatialHash& hash, std::vector<Edge>& edges, i32 door_width)
+{
+  auto& vertices = hash.vertices();
+  for (auto i = 0ul; i < doors.size(); ++i)
+  {
+    auto& door = doors[i];
+    auto current_width = glm::distance(door.start, door.end);
+    auto width_scale = door_width / current_width;
+    if(width_scale == 0.0)
+      width_scale = 1.0;
+
+    close_wall_gap(door.start, door.end, SegmentLayer::Door, hash, edges, width_scale);
+    door.start = vertices[hash.find_nearest(door.start)];
+    door.end   = vertices[hash.find_nearest(door.end)];
   }
 }
 
-bool stage_needs_confirmation(ReconstructionStage stage) 
+std::vector<glm::dvec2> sample_segments(const std::vector<Segment>& segments, i32 num_samples)
 {
-  switch (stage) 
+  auto points = std::vector<glm::dvec2>{};
+  points.reserve(segments.size());
+  for (const auto& s : segments)
   {
-      case ReconstructionStage::PrimitivesExtraction:
-      case ReconstructionStage::ClustersExtraction:
-      case ReconstructionStage::FacesExtraction:
-        return true;
-      default:
-        return false;
-  }
-}
-
-static void run_checkpoint_script(std::string_view script_name)
-{
-  auto log_file = std::format("out/{}.log", script_name); // es. "plot_segments.py.log"
-  auto command = std::format("python {} > \"{}\" 2>&1", script_name, log_file);
-  auto ret = std::system(command.c_str());
-  if (ret != 0) 
-  {
-    auto output = std::string{};
-    if (auto in = std::ifstream(log_file); in)
+    for (auto i = 0; i <= num_samples; ++i)
     {
-      output = std::string(
-        (std::istreambuf_iterator<char>(in)),
-        std::istreambuf_iterator<char>()
-      );
+      auto t = static_cast<f64>(i) / num_samples;
+      auto x = s.start.x + t * (s.end.x - s.start.x);
+      auto y = s.start.y + t * (s.end.y - s.start.y);
+      points.push_back(glm::dvec2{x, y});
     }
-    std::remove(log_file.c_str()); // delete log file
+  }
+  return points;
+}
 
-    throw std::runtime_error(std::format("Execution of `python {}` terminated with code {}.\n{}",script_name, ret, output));
+std::vector<std::vector<u32>> calculate_clusters(std::vector<glm::dvec2>& sample_points, f64 eps)
+{
+  auto dbscan = DBSCAN<glm::dvec2, f64>();
+  dbscan.Run(&sample_points, 2, eps, 2);
+  return dbscan.Clusters;
+}
+
+void windows_reconstruction(std::vector<glm::dvec2>& sample_points,
+                            std::vector<std::vector<u32>> clusters,
+                            SpatialHash& hash,
+                            std::vector<Edge>& edges,
+                            f32 window_width)
+{
+  for (auto i = 0ul; i < clusters.size(); ++i)
+  {
+    const auto& cluster_indices = clusters[i];
+    if (cluster_indices.empty())
+      continue;
+
+    auto box = BoundingBox2D(sample_points, cluster_indices);
+    auto sides = box.get_long_sides();
+    auto longest_side = sides.at(0);
+    auto current_width = glm::distance(longest_side.start, longest_side.end);
+    auto width_scale = window_width / current_width;
+    if(width_scale == 0.0)
+      width_scale = 1.0;
+    close_wall_gap(longest_side.start, longest_side.end, SegmentLayer::Window, hash, edges, width_scale);
   }
 }
 
+
+#if 0
 namespace Reconstruction
 {
-  // ============================
-  // Checkpoints 
-  // ============================
-
-  void checkpoint_raw_segments(const std::vector<Segment>& walls, 
-                               const std::vector<Segment>& doors, 
-                               const std::vector<Segment>& windows)
-  {
-    if(std::filesystem::exists("out") == false)
-      std::filesystem::create_directory("out");
-    
-    dump_segments_csv(walls, "out/walls_segments.csv");
-    dump_segments_csv(doors, "out/doors_segments.csv");
-    dump_segments_csv(windows, "out/windows_segments.csv");
-    run_checkpoint_script("plot_segments.py");
-  }
-
-  void checkpoint_clusters(const std::vector<glm::dvec2>& sample_points,
-                           const std::vector<std::vector<u32>>& clusters)
-  {
-    if(std::filesystem::exists("out") == false)
-      std::filesystem::create_directory("out");
-
-    dump_clusters_csv(sample_points, clusters, "out/clusters.csv");
-    run_checkpoint_script("plot_clusters.py");
-  }
-
-  void checkpoint_faces(const std::vector<Face>& faces)
-  {
-    if(std::filesystem::exists("out") == false)
-      std::filesystem::create_directory("out");
-
-    dump_faces_csv(faces, "out/faces.csv");
-    run_checkpoint_script("plot_faces.py");
-  }
-
-  // ============================
-  // Steps 
-  // ============================
-
-  void primitives_extraction(ReconstructionContext& ctx, const std::filesystem::path& file)
-  {
-    auto parser = DRWParser{};
-    auto dxf = dxfRW(file.string().c_str());
-    if (!dxf.read(&parser, false))
-      throw std::runtime_error(std::format("Error reading DXF file `{}` (code: {})", file.string(), static_cast<i32>(dxf.getError())));
-
-    auto bbox = BoundingBox2D(parser.walls);
-    auto area = bbox.calculate_area();
-    auto unit_scale = g_config.unit_scale;
-
-    auto doors_before = parser.doors.size();
-    parser.remove_duplicate_segments(parser.doors);
-    auto doors_after = parser.doors.size();
-    auto doors_removed = doors_before - doors_after;
-    
-    g_logger.push_message({std::format(
-        "=== Segment Deduplication ===\n"
-        " Doors before: {}\n"
-        " Doors after:  {}\n"
-        " Removed:      {} duplicates",
-        doors_before, doors_after, doors_removed),
-        LogLevel::Text});
-    
-    g_logger.push_message({std::format(
-        "DXF file data:\n"
-        " number of wall segments: {}\n"
-        " number of door segments: {}\n"
-        " number of window segments: {}\n"
-        " area: {}\n"
-        " unit scale: {}",
-        parser.walls.size(), parser.doors.size(), parser.windows.size(), area, unit_scale),
-        LogLevel::Text});
-    
-    normalize_segments(unit_scale, parser.walls);
-    normalize_segments(unit_scale, parser.doors);
-    normalize_segments(unit_scale, parser.windows);
-    center_mesh(parser.walls, parser.doors, parser.windows);
-
-    ctx.walls = std::move(parser.walls);
-    ctx.doors = std::move(parser.doors);
-    ctx.windows = std::move(parser.windows);
-  }
-
-  void vertex_snapping(ReconstructionContext& ctx, f64 snap_eps)
-  {
-    auto hash = SpatialHash{ snap_eps };
-    auto edges = std::vector<Edge>{};
-    for (const auto& seg : ctx.walls)
-    {
-      auto v1 = hash.snap(seg.start);
-      auto v2 = hash.snap(seg.end);
-      if (v1 != v2)
-        edges.push_back(Edge{ v1, v2, seg.layer });
-    }
-    ctx.hash = std::move(hash);
-    ctx.edges = std::move(edges);
-  }
-
-  void clusters_extraction(ReconstructionContext& ctx, i32 num_samples, f64 eps)
-  {
-    if(!ctx.windows.empty())
-    {
-      auto sample_points = sample_segments(ctx.windows, num_samples);
-      auto clusters = calculate_clusters(sample_points, eps);
-      ctx.sample_points = std::move(sample_points);
-      ctx.clusters = std::move(clusters);
-    }
-  }
-
-  void gaps_reconstruction(ReconstructionContext& ctx)
-  {
-    if(!ctx.doors.empty())
-    {
-      try 
-      {
-        doors_reconstruction(ctx.doors, ctx.hash, ctx.edges);
-        g_logger.push_message({std::format("Processing {} door segments", ctx.doors.size()), LogLevel::Text});
-      } 
-      catch (const std::exception& e) 
-      {
-        throw std::runtime_error(std::format("Door processing failed.\n{}", e.what()));
-      }
-    }
-    
-    if(!ctx.sample_points.empty() && !ctx.clusters.empty())
-    {
-      try
-      {
-        windows_reconstruction(ctx.sample_points, ctx.clusters, ctx.hash, ctx.edges);
-        g_logger.push_message({std::format("Processing {} windows clusters", ctx.clusters.size()), 
-          LogLevel::Text});
-      } 
-      catch (const std::exception& e) 
-      {
-        throw std::runtime_error(std::format("Window processing failed.\n{}", e.what()));
-      }
-    }
-  }
-
-  void faces_extraction(ReconstructionContext& ctx, 
-                       const std::vector<glm::dvec2>& vertices, 
-                       const std::vector<Edge>& edges)
-  {
-    auto arrangement = build_arrangement(vertices, edges);
-    auto faces = extract_faces(arrangement);
-  
-    ctx.arrangement = std::move(arrangement);
-    ctx.faces = std::move(faces);
-  }
-
   ReconstructionResult build_mesh(const std::vector<Face>& faces)
   {
     auto mesh_vertices       = std::vector<Vertex_PNT>{};
     auto mesh_floor_indices  = std::vector<u32>{};
     auto mesh_wall_indices   = std::vector<u32>{};
     auto result              = ReconstructionResult{};
-    
+
     auto ceil_height         = g_config.ceil_height;
     auto door_height         = g_config.door_height;
     auto window_sill         = g_config.window_sill_height;
@@ -241,7 +161,7 @@ namespace Reconstruction
     auto floor_face = std::ranges::find_if(faces, [](const Face& f) { return f.type == FaceType::Floor; });
     floor_face->triangulate(mesh_vertices, mesh_floor_indices, 0.f, floor_tex_scaling, true);
     floor_face->triangulate(mesh_vertices, mesh_wall_indices, ceil_height, wall_tex_scaling, false);
-    
+
     // =======================
     // Extrude walls
     // =======================
@@ -272,7 +192,7 @@ namespace Reconstruction
     {
       face.extrude(mesh_vertices, mesh_wall_indices, 0.0f, window_sill, wall_tex_scaling);
       face.triangulate(mesh_vertices, mesh_wall_indices, window_sill, wall_tex_scaling, true);
-      
+
       face.extrude(mesh_vertices, mesh_wall_indices, window_height, ceil_height, wall_tex_scaling);
       face.triangulate(mesh_vertices, mesh_wall_indices, window_height, wall_tex_scaling, false);
 
@@ -287,10 +207,11 @@ namespace Reconstruction
 
     auto wall_range = PrimitiveRange{ static_cast<u32>(all_indices.size()), static_cast<u32>(mesh_wall_indices.size()), MaterialType::Wall };
     all_indices.insert(all_indices.end(), mesh_wall_indices.begin(), mesh_wall_indices.end());
-    
+
     result.mesh_vertices = std::move(mesh_vertices);
     result.mesh_indices  = std::move(all_indices);
     result.primitives = { floor_range, wall_range };
     return result;
   }
 }
+#endif

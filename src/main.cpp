@@ -8,10 +8,10 @@
 #include <stdexcept>
 #include <atomic>
 
+#include "dump.hpp"
+#include "misc.hpp"
 #include "types.hpp"
 #include "reconstruction.hpp"
-#include "log.hpp"
-#include "globals.hpp"
 #include "graphics/texture.hpp"
 #include "graphics/pipeline.hpp"
 #include "graphics/camera.hpp"
@@ -19,6 +19,7 @@
 #include "graphics/transformation.hpp"
 #include "graphics/framebuffer.hpp"
 #include "io/gltf_exporter.hpp"
+#include "io/config_loader.hpp"
 #include "gui/gui.hpp"
 
 #include <imgui.h>
@@ -27,43 +28,45 @@
 
 #include <glm/trigonometric.hpp>
 #include <glm/geometric.hpp>
+#include <vector>
 
-static constexpr auto initial_window_width = 1280;
-static constexpr auto initial_window_height = 720; // aspect ratio 16:9
-static auto viewport_info = ViewportInfo{
-  .width=initial_window_width, 
-  .height=initial_window_height, 
-  .screen_pos=glm::vec2{0, 0},
-  .aspect=static_cast<f32>(initial_window_width) / static_cast<f32>(initial_window_height)
-};
+// static constexpr auto initial_window_width = 1280;
+// static constexpr auto initial_window_height = 720; // aspect ratio 16:9
+// static auto viewport_info = ViewportInfo{
+//   .width=initial_window_width,
+//   .height=initial_window_height,
+//   .screen_pos=glm::vec2{0, 0},
+//   .aspect=static_cast<f32>(initial_window_width) / static_cast<f32>(initial_window_height)
+// };
 
-static auto vertex_program = ShaderProgram{};
-static auto fragment_program = ShaderProgram{};
-static auto pipeline = ProgramPipelineObject{};
+// static auto vertex_program = ShaderProgram{};
+// static auto fragment_program = ShaderProgram{};
+// static auto pipeline = ProgramPipelineObject{};
 
-static auto fbo = FrameBuffer{};
-static auto fbo_color_texture = Texture{};
-static auto fbo_depth_texture = Texture{};
+// static auto fbo = FrameBuffer{};
+// static auto fbo_color_texture = Texture{};
+// static auto fbo_depth_texture = Texture{};
 
-static auto light_position = glm::vec3{ 0.0f, 2.0f, 0.0f };
-static auto light_power = 700.0f; // in watt
+// static auto light_position = glm::vec3{ 0.0f, 2.0f, 0.0f };
+// static auto light_power = 700.0f; // in watt
 
-static auto camera = Camera(0.1f, 500.0f, 45.f, viewport_info.aspect);
-static constexpr auto camera_speed = 0.1f;
+// static auto camera = Camera(0.1f, 500.0f, 45.f, viewport_info.aspect);
+// static constexpr auto camera_speed = 0.1f;
 
-static auto static_mesh = std::unique_ptr<StaticMesh>{};
-static auto mesh_transform = Transformation{};
+// static auto static_mesh = std::unique_ptr<StaticMesh>{};
+// static auto mesh_transform = Transformation{};
 
-static auto viewport_image = Texture{};
-static auto plot_image = Texture{};
+// static auto viewport_image = Texture{};
+// static auto plot_image = Texture{};
 
-static auto current_stage = ReconstructionStage::PrimitivesExtraction;
-static auto worker_state = std::atomic<ThreadState>{ ThreadState::Idle };
-static auto worker = std::optional<std::jthread>{};
-static auto worker_is_done = std::atomic<bool>{ false };
-static auto build_result = ReconstructionResult{};
-static auto ctx = ReconstructionContext{};
+// static auto current_stage = ReconstructionStage::PrimitivesExtraction;
+// static auto worker_state = std::atomic<ThreadState>{ ThreadState::Idle };
+// static auto worker = std::optional<std::jthread>{};
+// static auto worker_is_done = std::atomic<bool>{ false };
+// static auto build_result = ReconstructionResult{};
 
+
+#if 0
 static void create_gl_pipeline_object(ShaderProgram& vertex_program, ShaderProgram& fragment_program, ProgramPipelineObject& pipeline)
 {
   auto shaders_dir = std::filesystem::current_path() / "shaders";
@@ -115,7 +118,7 @@ static void create_gl_pipeline_object(ShaderProgram& vertex_program, ShaderProgr
 static void handle_camera_input(GLFWwindow* window, Camera& camera)
 {
   constexpr auto velocity = camera_speed;
-  
+
   if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)    camera.rotate_pitch(+glm::radians(1.0f));
   if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)  camera.rotate_pitch(-glm::radians(1.0f));
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)  camera.rotate_yaw(+glm::radians(1.0f));
@@ -149,9 +152,9 @@ static void create_framebuffer(FrameBuffer& fb, Texture& color, Texture& depth, 
   fb.attach_texture(FramebufferAttachment::COLOR_0, color, 0);
   fb.attach_texture(FramebufferAttachment::DEPTH_STENCIL, depth, 0);
 
-  if (!fb.check_status()) 
+  if (!fb.check_status())
     throw std::runtime_error("Invalid framebuffer object!");
-  
+
   fb.unbind(FramebufferTarget::READ_DRAW);
 }
 
@@ -162,42 +165,192 @@ static auto create_floor_face(BoundingBox2D house_bbox)
     glm::dvec2(house_bbox.min.x, house_bbox.min.y),
     glm::dvec2(house_bbox.max.x, house_bbox.min.y),
     glm::dvec2(house_bbox.max.x, house_bbox.max.y),
-    glm::dvec2(house_bbox.min.x, house_bbox.max.y) 
+    glm::dvec2(house_bbox.min.x, house_bbox.max.y)
   };
   floor_face.type = FaceType::Floor;
   return floor_face;
 }
+#endif
 
 int main(int argc, char** argv)
 {
   if (argc != 2)
     throw std::runtime_error("Missing argument: <config>.json");
 
-  try
+  auto config = Config(argv[1]);
+  static auto counter = 0;
+  std::string output_name;
+
+  // =======================================================
+  // Step 1: parsing
+  // =======================================================
+  std::println("\n=========== Step 1: parsing ===========\n");
+  std::println("DXF file {} ...", config.dxf_path.string());
+  ParsingResult parsing_result = parse_dxf(false, config.dxf_path, config.unit_scale);
+  dump_segments_csv(parsing_result.walls, "out/walls.csv");
+  dump_segments_csv(parsing_result.doors, "out/doors.csv");
+  dump_segments_csv(parsing_result.windows, "out/windows.csv");
+  output_name = std::format("out/segments_{:04d}.jpg", counter++);
+  run_python_script("plot_segments.py", output_name);
+  std::filesystem::remove("out/walls.csv");
+  std::filesystem::remove("out/doors.csv");
+  std::filesystem::remove("out/windows.csv");
+
+  // =======================================================
+  // Step 2: vertex snapping
+  // =======================================================
+  std::println("\n=========== Step 2: vertex snapping ===========\n");
+  SnappingResult snapping_result{};
   {
-    g_config = Config(argv[1]);
-  }
-  catch(const std::exception& e)
-  {
-    std::println("Configuration error: {}", e.what());
-    exit(1);
+    auto wall_vertices = std::vector<glm::dvec2>{};
+    wall_vertices.reserve(parsing_result.walls.size() * 2);
+    for (const auto& segment : parsing_result.walls)
+    {
+      wall_vertices.push_back(segment.start);
+      wall_vertices.push_back(segment.end);
+    }
+    auto num_vertices_before = wall_vertices.size();
+    std::println("Before snapping: {} vertices", num_vertices_before);
+    dump_vertices_csv(wall_vertices, "out/vertices.csv");
+    output_name = std::format("out/vertices_{:04d}.jpg", counter++);
+    run_python_script("plot_vertices.py", output_name);
+    std::filesystem::remove("out/vertices.csv");
+
+    snapping_result = vertex_snapping(parsing_result.walls, config.snap_eps);
+    auto num_vertices_after = snapping_result.hash.vertices().size();
+    auto merged = num_vertices_before - num_vertices_after;
+    std::println("After snapping: {} vertices -> {} merged", num_vertices_after, merged);
+    dump_vertices_csv(snapping_result.hash.vertices(), "out/vertices.csv");
+    output_name = std::format("out/vertices_{:04d}.jpg", counter++);
+    run_python_script("plot_vertices.py", output_name);
+    std::filesystem::remove("out/vertices.csv");
   }
 
+  auto& hash = snapping_result.hash;
+  auto& edges = snapping_result.edges;
+
+  // =======================================================
+  // Step 3: doors reconstruction
+  // =======================================================
+  std::println("\n=========== Step 3: doors reconstruction ===========\n");
+  if(!parsing_result.doors.empty())
+  {
+    auto door_width = config.door_width;
+    std::println("Before doors reconstruction: vertices = {} edges = {}", hash.vertices().size(), edges.size());
+    doors_reconstruction(parsing_result.doors, hash, edges, 0);
+    std::println("After doors reconstruction: vertices = {} edges = {}", hash.vertices().size(), edges.size());
+    // dump segments for debugging
+    {
+      const auto& vertices = hash.vertices();
+      auto walls_segments = std::vector<Segment>{};
+      auto doors_segments = std::vector<Segment>{};
+      for (const auto& edge : edges)
+      {
+        auto& p1 = vertices[edge.v1];
+        auto& p2 = vertices[edge.v2];
+        auto seg = Segment{ p1, p2, edge.layer };
+        if(edge.layer == SegmentLayer::Wall)
+          walls_segments.push_back(seg);
+        else if(edge.layer == SegmentLayer::Door)
+          doors_segments.push_back(seg);
+      }
+      dump_segments_csv(walls_segments, "out/walls.csv");
+      dump_segments_csv(doors_segments, "out/doors.csv");
+      output_name = std::format("out/segments_{:04d}.jpg", counter++);
+      run_python_script("plot_segments.py", output_name);
+      std::filesystem::remove("out/vertices.csv");
+      std::filesystem::remove("out/doors.csv");
+    }
+  }
+  else
+    std::println("No doors to reconstruct.");
+
+  // =======================================================
+  // Step 4: windows reconstruction
+  // =======================================================
+  std::println("\n=========== Step 4: windows reconstruction ===========\n");
+  if(!parsing_result.windows.empty())
+  {
+    auto& windows = parsing_result.windows;
+    auto num_samples = config.cluster_num_samples;
+    auto eps = config.cluster_eps;
+    auto window_width = config.window_width;
+
+    // Sample points from window segments and calculate clusters
+    auto sample_points = sample_segments(windows, num_samples);
+    auto clusters = calculate_clusters(sample_points, eps);
+    std::println("sample_points: {}, clusters: {}", sample_points.size(), clusters.size());
+    dump_clusters_csv(sample_points, clusters, "out/clusters.csv");
+    output_name = std::format("out/clusters_{:04d}.jpg", counter++);
+    run_python_script("plot_clusters.py", output_name);
+    std::filesystem::remove("out/clusters.csv");
+
+    windows_reconstruction(sample_points, clusters, hash, edges, 0);
+    // dump segments for debugging
+    {
+      const auto& vertices = hash.vertices();
+      auto walls_segments = std::vector<Segment>{};
+      auto doors_segments = std::vector<Segment>{};
+      auto windows_segments = std::vector<Segment>{};
+      for (const auto& edge : edges)
+      {
+        auto& p1 = vertices[edge.v1];
+        auto& p2 = vertices[edge.v2];
+        auto seg = Segment{ p1, p2, edge.layer };
+        if(edge.layer == SegmentLayer::Wall)
+          walls_segments.push_back(seg);
+        else if(edge.layer == SegmentLayer::Door)
+          doors_segments.push_back(seg);
+        else if(edge.layer == SegmentLayer::Window)
+          windows_segments.push_back(seg);
+      }
+      dump_segments_csv(walls_segments, "out/walls.csv");
+      dump_segments_csv(doors_segments, "out/doors.csv");
+      dump_segments_csv(windows_segments, "out/windows.csv");
+      output_name = std::format("out/segments_{:04d}.jpg", counter++);
+      run_python_script("plot_segments.py", output_name);
+      std::filesystem::remove("out/vertices.csv");
+      std::filesystem::remove("out/doors.csv");
+      std::filesystem::remove("out/windows.csv");
+    }
+  }
+  else
+    std::println("No windows to reconstruct.");
+
+  // =======================================================
+  // Step 5: planar straight line graph and face extraction
+  // =======================================================
+  std::println("\n=========== Step 5: face extraction ===========\n");
+  auto arrangement = build_arrangement(hash.vertices(), edges);
+  std::println("- Number of faces: {}", arrangement.number_of_faces());
+  std::println("- Number of vertices: {}", arrangement.number_of_vertices());
+  std::println("- Number of edges: {}", arrangement.number_of_edges());
+
+  auto faces = extract_faces(arrangement);
+  std::println("- Number of extracted faces: {}", faces.size());
+
+  dump_faces_csv(faces, "out/faces.csv");
+  output_name = std::format("out/faces_{:04d}.png", counter++);
+  run_python_script("plot_faces.py", output_name);
+  std::filesystem::remove("out/faces.csv");
+
+  
+
+#if 0
   auto window_context = init_window_context(viewport_info.width, viewport_info.height);
- 
+
   create_gl_pipeline_object(vertex_program, fragment_program, pipeline);
 
   camera.eye = { 0.0f, 2.0f, 8.0f };
   // camera.set_orientation(glm::radians(glm::vec3{ 170.f, 40.f, 180.f }));
-  
+
   auto floor_texture = Texture::create_from_file("materials/patio_tiles/patio_tiles_diff_1k.jpg");
   auto wall_texture = Texture::create_from_file("materials/concrete_layers/concrete_layers_diff_1k.jpg");
-  
-  g_logger.push_message({ std::format("Processing CAD file: {}", g_config.dxf_path.string()), LogLevel::Text });
+
   while (!glfwWindowShouldClose(window_context))
   {
     glfwPollEvents();
-    if (glfwGetKey(window_context, GLFW_KEY_ESCAPE) == GLFW_PRESS) 
+    if (glfwGetKey(window_context, GLFW_KEY_ESCAPE) == GLFW_PRESS)
       glfwSetWindowShouldClose(window_context, GLFW_TRUE);
 
     // Start the Dear ImGui frame
@@ -211,153 +364,8 @@ int main(int argc, char** argv)
     // =======================================================
     if(worker_state == ThreadState::Idle)
     {
-      switch (current_stage) 
+      switch (current_stage)
       {
-        // =======================================================
-        // Primitives extraction
-        // =======================================================
-        case ReconstructionStage::PrimitivesExtraction:
-        {
-          g_logger.push_message({"[worker] Starting PrimitivesExtraction...", LogLevel::Info});
-          worker_state = ThreadState::Running;
-          worker.emplace([&] {
-            try
-            {
-              Reconstruction::primitives_extraction(ctx, g_config.dxf_path);
-              Reconstruction::checkpoint_raw_segments(ctx.walls, ctx.doors, ctx.windows);
-              worker_is_done = true;
-            }
-            catch(const std::exception& e)
-            {
-              g_logger.push_message({std::format("[worker] Error during PrimitivesExtraction.\n{}", e.what()), LogLevel::Error});
-              worker_state = ThreadState::Error;
-              worker_is_done = true;
-            }
-          });
-          break;
-        }
-
-        // =======================================================
-        // Vertex snapping
-        // =======================================================  
-        case ReconstructionStage::VertexSnapping:
-        {
-          g_logger.push_message({"[worker] Starting VertexSnapping...", LogLevel::Info});
-          worker_state = ThreadState::Running;
-          worker.emplace([&] {
-            try 
-            {
-              auto vertices_before = ctx.walls.size() * 2;
-
-              Reconstruction::vertex_snapping(ctx, g_config.snap_eps);
-
-              auto vertices_after = ctx.hash.vertices().size();
-              auto merged = vertices_before - vertices_after;
-              g_logger.push_message({
-                std::format("{} vertices in -> {} vertices out ({} merged, eps={:.4f})",
-                vertices_before, vertices_after, merged, g_config.snap_eps),
-                LogLevel::Text});
-
-              worker_is_done = true;
-            } 
-            catch (const std::exception& e) 
-            {
-              g_logger.push_message({std::format("[worker] Error during VertexSnapping.\n{}", e.what()), LogLevel::Error});
-              worker_state = ThreadState::Error;
-              worker_is_done = true;
-            }
-          });
-          break;
-        }
-
-        // =======================================================
-        // Clusters extraction
-        // =======================================================  
-        case ReconstructionStage::ClustersExtraction:
-        {
-          g_logger.push_message({"[worker] Starting ClustersExtraction...", LogLevel::Info});
-          worker_state = ThreadState::Running;
-          worker.emplace([&] {
-            try 
-            {
-              Reconstruction::clusters_extraction(ctx, g_config.cluster_num_samples, g_config.cluster_eps);
-              Reconstruction::checkpoint_clusters(ctx.sample_points, ctx.clusters);
-              worker_is_done = true;
-            } 
-            catch (const std::exception& e) 
-            {
-              g_logger.push_message({std::format("[worker] Error during ClustersExtraction.\n{}", e.what()), LogLevel::Error});
-              worker_state = ThreadState::Error;
-              worker_is_done = true;
-            }
-          });
-          break;
-        }
-        
-        // =======================================================
-        // Gaps reconstruction
-        // =======================================================
-        case ReconstructionStage::GapsReconstruction:
-        {
-          g_logger.push_message({"[worker] Starting GapsReconstruction...", LogLevel::Info});
-          worker_state = ThreadState::Running;
-          worker.emplace([&] {
-            try 
-            {
-              auto edges_before = ctx.edges.size();
-              auto doors_count = ctx.doors.size();
-              auto windows_count = ctx.clusters.size();
-
-              Reconstruction::gaps_reconstruction(ctx);
-
-              auto edges_after = ctx.edges.size();
-              auto edges_added = edges_after - edges_before;
-
-              g_logger.push_message({
-                std::format("{} doors, {} window clusters -> {} edges added (total edges: {})",
-                doors_count, windows_count, edges_added, edges_after),
-                LogLevel::Text });
-
-              worker_is_done = true;
-            } 
-            catch (const std::exception& e) 
-            {
-              g_logger.push_message({std::format("[worker] Error during GapsReconstruction.\n{}", e.what()), LogLevel::Error});
-              worker_state = ThreadState::Error;
-              worker_is_done = true;
-            }
-          });
-          break;
-        }
-
-        // =======================================================
-        // Faces extraction
-        // =======================================================
-        case ReconstructionStage::FacesExtraction:
-        {
-          g_logger.push_message({"[worker] Starting FaceExtraction...", LogLevel::Info});
-          worker_state = ThreadState::Running;
-          worker.emplace([&] {
-            try 
-            {
-              Reconstruction::faces_extraction(ctx, ctx.hash.vertices(), ctx.edges);
-              g_logger.push_message({std::format("Arrangement completed:\n number of vertices={}\n number of edges={}\n number of faces={}",
-                  ctx.arrangement.number_of_vertices(), ctx.arrangement.number_of_edges(), ctx.arrangement.number_of_faces()), LogLevel::Text});
-              g_logger.push_message({ std::format("Number of extracted faces: {}", ctx.faces.size()), LogLevel::Text});
-
-              Reconstruction::checkpoint_faces(ctx.faces);
-              worker_is_done = true;
-            } 
-            catch (const std::exception& e) 
-            {
-              g_logger.push_message({std::format("[worker] Error during FaceExtraction.\n{}", e.what()), LogLevel::Error});
-              worker_state = ThreadState::Error;
-              worker_is_done = true;
-            } 
-          });
-          break;
-        } 
-
         // =======================================================
         // Mesh building
         // =======================================================
@@ -366,7 +374,7 @@ int main(int argc, char** argv)
           g_logger.push_message({"[worker] Starting BuildMesh...", LogLevel::Info});
           worker_state = ThreadState::Running;
           worker.emplace([&] {
-            try 
+            try
             {
               // remove all FLOOR faces and push only one quad for floor
               std::erase_if(ctx.faces, [](auto face) { return face.type == FaceType::Floor; });
@@ -375,8 +383,8 @@ int main(int argc, char** argv)
               ctx.faces.push_back(std::move(floor_face));
               build_result = Reconstruction::build_mesh(ctx.faces);
               worker_is_done = true;
-            } 
-            catch (const std::exception& e) 
+            }
+            catch (const std::exception& e)
             {
               g_logger.push_message({std::format("[worker] Error during BuildMesh.\n{}", e.what()), LogLevel::Error});
               worker_state = ThreadState::Error;
@@ -396,74 +404,8 @@ int main(int argc, char** argv)
     else if(worker_state == ThreadState::Running && worker_is_done.load())
     {
       worker_is_done = false;
-      switch (current_stage) 
+      switch (current_stage)
       {
-        // ===========================================
-        // On PrimitivesExtraction completed
-        // ===========================================
-        case ReconstructionStage::PrimitivesExtraction:
-        {
-          g_logger.push_message({"PrimitivesExtraction completed! Loading segments.png...", LogLevel::Success});
-          if(std::filesystem::exists("out/segments.png"))
-          {
-            if(plot_image.is_valid()) plot_image.destroy();
-            
-            plot_image = Texture::create_from_file("out/segments.png");
-            viewport_image = plot_image;
-          }
-          break;
-        }
-
-        // ===========================================
-        // On VertexSnapping completed
-        // ===========================================
-        case ReconstructionStage::VertexSnapping:
-        {
-          g_logger.push_message({"VertexSnapping completed!", LogLevel::Success});
-          break; // no plot, no confirmation prompt
-        }
-        
-        // ===========================================
-        // On ClustersExtraction completed
-        // ===========================================
-        case ReconstructionStage::ClustersExtraction:
-        {
-          g_logger.push_message({"ClustersExtraction completed! Loading clusters.png...", LogLevel::Success});
-          if(std::filesystem::exists("out/clusters.png"))
-          {
-            if(plot_image.is_valid()) plot_image.destroy();
-            
-            plot_image = Texture::create_from_file("out/clusters.png");
-            viewport_image = plot_image;
-          }
-          break;
-        }  
-        
-        // ===========================================
-        // On GapsReconstruction completed
-        // ===========================================
-        case ReconstructionStage::GapsReconstruction:
-        {
-          g_logger.push_message({"GapsReconstruction completed!", LogLevel::Success});
-          break; // no plot, no confirmation prompt
-        }
-        
-        // ===========================================
-        // On FacesExtraction completed
-        // ===========================================
-        case ReconstructionStage::FacesExtraction:
-        {
-          g_logger.push_message({"FaceExtraction completed! Loading faces.png...", LogLevel::Success});
-          if(std::filesystem::exists("out/faces.png"))
-          {
-            if(plot_image.is_valid()) plot_image.destroy();
-            
-            plot_image = Texture::create_from_file("out/faces.png");
-            viewport_image = plot_image;
-          }
-          break;
-        }
-
         // ===========================================
         // On BuildMesh completed
         // ===========================================
@@ -476,32 +418,22 @@ int main(int argc, char** argv)
                                                     build_result.mesh_indices.size());
 
           // e.g. out/draftperson_Floor_Plan.gltf
-          auto gltf_path = std::filesystem::path("out") / g_config.dxf_path.filename().replace_extension("gltf"); 
-          export_to_gltf(build_result, gltf_path); 
+          auto gltf_path = std::filesystem::path("out") / g_config.dxf_path.filename().replace_extension("gltf");
+          export_to_gltf(build_result, gltf_path);
           g_logger.push_message({std::format("The exported model: {}", gltf_path.string()), LogLevel::Text});
-          
+
           // e.g. out/draftperson_Floor_Plan_openings.json
           auto json_filename = g_config.dxf_path.stem().string() + "_openings.json";
-          auto json_path = std::filesystem::path("out") / json_filename;          
+          auto json_path = std::filesystem::path("out") / json_filename;
           export_opening_placeholders(build_result, json_path);
           g_logger.push_message({std::format("The exported placeholder: {}", json_path.string()), LogLevel::Text});
           break;
         }
 
-        default: 
+        default:
           break;
       }
 
-      if (stage_needs_confirmation(current_stage)) 
-      {
-        worker_state = ThreadState::WaitingConfirmation; // wait for "y/n" input from the console panel
-      } 
-      else 
-      {
-        // advance immediately without asking for confirmation
-        current_stage = next_stage(current_stage);
-        worker_state = ThreadState::Idle;
-      }
     }
 
     // =======================================================
@@ -521,7 +453,7 @@ int main(int argc, char** argv)
         create_framebuffer(fbo, fbo_color_texture, fbo_depth_texture, viewport_info.width, viewport_info.height);
       }
     }
-    
+
     // =======================================================
     // Model rendering
     // =======================================================
@@ -534,7 +466,7 @@ int main(int argc, char** argv)
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glViewport(0, 0, viewport_info.width, viewport_info.height);
 
-      handle_camera_input(window_context, camera);   
+      handle_camera_input(window_context, camera);
       auto mat_camera = camera.canonical_to_camera();
       auto mat_persp = camera.get_perspective();
 
@@ -554,9 +486,9 @@ int main(int argc, char** argv)
           floor_texture.bind_texture_unit(0);
         else
           wall_texture.bind_texture_unit(0);
-        
+
         glDrawElements(GL_TRIANGLES, prim.index_count, GL_UNSIGNED_INT, (void*)(uintptr_t)(prim.index_offset * sizeof(u32)));
-      } 
+      }
 
       fbo.unbind(FramebufferTarget::READ_DRAW);
 
@@ -569,18 +501,18 @@ int main(int argc, char** argv)
     // Log panel
     // =======================================================
     console_panel(window_context, current_stage, worker_state);
-    
+
     // =======================================================
     // Properties, Scene panels
     // =======================================================
     properties_panel();
     scene_panel(camera, mesh_transform, light_position, light_power);
-    
-    render_gui(); 
+
+    render_gui();
     glfwSwapBuffers(window_context);
   }
   glfwTerminate();
-  
+
   if(plot_image.is_valid()) plot_image.destroy();
   if(fbo.is_valid())
   {
@@ -588,6 +520,6 @@ int main(int argc, char** argv)
     fbo_color_texture.destroy();
     fbo_depth_texture.destroy();
   }
-  
   return 0;
+#endif
 }

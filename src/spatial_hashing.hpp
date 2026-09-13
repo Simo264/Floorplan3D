@@ -6,15 +6,15 @@
 #include <vector>
 #include <cmath>
 
-struct CellCoord 
+struct CellCoord
 {
   i32 x, y;
   bool operator==(const CellCoord&) const = default;
 };
 
-struct CellCoordHash 
+struct CellCoordHash
 {
-  size_t operator()(CellCoord c) const 
+  size_t operator()(CellCoord c) const
   {
     auto hx = std::hash<i32>{}(c.x);
     auto hy = std::hash<i32>{}(c.y);
@@ -25,15 +25,15 @@ struct CellCoordHash
 class SpatialHash
 {
 public:
-  SpatialHash(f64 epsilon = 1e-4) : m_epsilon{ epsilon} {}
+  SpatialHash(f64 epsilon = 1e-4) : m_epsilon{ epsilon}, m_epsilon_sq{ epsilon * epsilon } {}
 
   VertexId snap(glm::dvec2 p);
   VertexId find_nearest(glm::dvec2 p) const;
-  
+
   auto& vertices() { return m_vertices; }
 
-private:  
-  auto get_cell(glm::dvec2 p) const -> CellCoord
+private:
+  CellCoord get_cell(glm::dvec2 p) const
   {
     return CellCoord {
       static_cast<i32>(std::floor(p.x / m_epsilon)),
@@ -41,8 +41,8 @@ private:
     };
   }
 
-  
   f64 m_epsilon;
+  f64 m_epsilon_sq;
 
   // We want to use CellCoord as key in unordered_map.
   // Maps each occupied cell to the list of vertex indices that fall inside it.

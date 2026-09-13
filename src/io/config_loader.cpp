@@ -1,15 +1,15 @@
 #include "config_loader.hpp"
-#include "../globals.hpp"
 
 #include <cassert>
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <format>
+#include <print>
 
 Config::Config(const std::filesystem::path& config_path)
 {
   auto file = std::ifstream(config_path);
-  if (!file.is_open()) 
+  if (!file.is_open())
     throw std::runtime_error(std::format("Error on opening configuration file: {}", config_path.string()));
 
   auto json = nlohmann::json{};
@@ -29,11 +29,11 @@ Config::Config(const std::filesystem::path& config_path)
   window_sill_height    = json.value("window_sill_height", 0.9f);
   window_height         = json.value("window_height", 1.4f);
   window_width          = json.value("window_width", 1.6f);
-  
+
   snap_eps              = json.value("snap_eps", 1e-2);
   cluster_num_samples   = json.value("cluster_num_samples", 10);
   cluster_eps           = json.value("cluster_eps", 1.0);
-  
+
   floor_texture_scaling = json.value("floor_texture_scaling", 1.0f);
   wall_texture_scaling  = json.value("wall_texture_scaling", 1.0f);
 
@@ -41,21 +41,21 @@ Config::Config(const std::filesystem::path& config_path)
 
   door_aspect = door_width / door_height;
   window_aspect = window_width / window_height;
-  auto message = std::format("Configuration loaded successfully:\n"
-    "  unit_scale               = {:.3f}\n"
-    "  ceil_height              = {:.3f} m\n"
-    "  door_width               = {:.3f} m\n"
-    "  door_height              = {:.3f} m\n"
-    "  door_aspect_ratio        = {:.3f}\n"
-    "  window_sill_height       = {:.3f} m\n"
-    "  window_height            = {:.3f} m\n"
-    "  window_width             = {:.3f} m\n"
-    "  window_aspect_ratio      = {:.3f}\n"
-    "  snap_eps                 = {:.3e}\n"
-    "  cluster_eps              = {:.3f}\n"
-    "  cluster_num_samples      = {}\n"
-    "  floor_texture_scaling    = {:.2f}\n"
-    "  wall_texture_scaling     = {:.2f}",
+  auto message = std::format("Configuration loaded:\n"
+    "- unit_scale               = {:.3f}\n"
+    "- ceil_height              = {:.3f} m\n"
+    "- door_width               = {:.3f} m\n"
+    "- door_height              = {:.3f} m\n"
+    "- door_aspect_ratio        = {:.3f}\n"
+    "- window_sill_height       = {:.3f} m\n"
+    "- window_height            = {:.3f} m\n"
+    "- window_width             = {:.3f} m\n"
+    "- window_aspect_ratio      = {:.3f}\n"
+    "- snap_eps                 = {:.3e}\n"
+    "- cluster_eps              = {:.3f}\n"
+    "- cluster_num_samples      = {}\n"
+    "- floor_texture_scaling    = {:.2f}\n"
+    "- wall_texture_scaling     = {:.2f}",
     unit_scale,
     ceil_height,
     door_width,
@@ -72,7 +72,7 @@ Config::Config(const std::filesystem::path& config_path)
     wall_texture_scaling
   );
 
-  g_logger.push_message({message, LogLevel::Text});
+  std::println("{}", message);
 }
 
 void Config::validate_config()
@@ -108,7 +108,7 @@ void Config::validate_config()
     throw std::runtime_error("door_height must be > 0");
   if (door_height >= ceil_height)
       throw std::runtime_error("door_height must be < ceil_height");
-    
+
   if (window_width <= 0.0)
     throw std::runtime_error("window_width must be > 0");
   if (window_height <= 0.0)

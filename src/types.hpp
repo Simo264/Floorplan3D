@@ -49,9 +49,9 @@ enum class ThreadState { Idle, Running, WaitingConfirmation, Error };
 using VertexId = u32;
 constexpr VertexId INVALID_VERTEX_ID = std::numeric_limits<VertexId>::max();
 
-enum class SegmentLayer : i32 { None=0, Wall=1, Window=2, Door=3 };
-enum class FaceType : i32 { None=0, Floor=1, Window=2, Door=3, Wall=4 };
-enum class OpeningType { Door=0, Window=1 };
+enum class SegmentLayer : i32 { None=0, Wall, Window, Door };
+enum class FaceType : i32 { None=0, Floor, Window, Door, Wall };
+enum class OpeningType { Door, Window };
 
 struct Segment
 {

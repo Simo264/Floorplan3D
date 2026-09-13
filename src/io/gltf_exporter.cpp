@@ -2,7 +2,6 @@
 
 #include "../types.hpp"
 #include "../reconstruction.hpp"
-#include "../globals.hpp"
 #include <vector>
 #include <stdexcept>
 
@@ -10,9 +9,9 @@
 #include <glm/common.hpp>
 #include <nlohmann/json.hpp>
 
-static tinygltf::BufferView create_buffer_view(i32 buffer, 
+static tinygltf::BufferView create_buffer_view(i32 buffer,
                                                i32 byte_offset,
-                                               i32 byte_length, 
+                                               i32 byte_length,
                                                i32 target)
 {
   tinygltf::BufferView bv;
@@ -23,9 +22,9 @@ static tinygltf::BufferView create_buffer_view(i32 buffer,
   return bv;
 }
 
-static tinygltf::Accessor create_accessor(i32 buffer_view, 
+static tinygltf::Accessor create_accessor(i32 buffer_view,
                                           i32 byte_offset,
-                                          i32 component_type, 
+                                          i32 component_type,
                                           i64 count,
                                           i32 type)
 {
@@ -38,9 +37,9 @@ static tinygltf::Accessor create_accessor(i32 buffer_view,
   return acc;
 }
 
-static tinygltf::Accessor create_accessor(i32 buffer_view, 
+static tinygltf::Accessor create_accessor(i32 buffer_view,
                                           i32 byte_offset,
-                                          i32 component_type, 
+                                          i32 component_type,
                                           i64 count,
                                           i32 type,
                                           const std::vector<f64>& min_vals,
@@ -52,10 +51,10 @@ static tinygltf::Accessor create_accessor(i32 buffer_view,
   return acc;
 }
 
+#if 0
 
-
-void export_to_gltf(const ReconstructionResult& result, 
-                    const std::filesystem::path& output_path) 
+void export_to_gltf(const ReconstructionResult& result,
+                    const std::filesystem::path& output_path)
 {
   auto model = tinygltf::Model{};
   model.asset.version = "2.0";
@@ -85,7 +84,7 @@ void export_to_gltf(const ReconstructionResult& result,
 
   auto pos_min = glm::vec3{std::numeric_limits<f32>::max()};
   auto pos_max = glm::vec3{std::numeric_limits<f32>::lowest()};
-  for (const auto& v : result.mesh_vertices) 
+  for (const auto& v : result.mesh_vertices)
   {
     pos_data.push_back(v.position.x);
     pos_data.push_back(v.position.y);
@@ -116,7 +115,7 @@ void export_to_gltf(const ReconstructionResult& result,
   // ==========================================
   auto buffer = tinygltf::Buffer{};
   buffer.data.resize(total_byte_len);
-  
+
   std::memcpy(buffer.data.data(), pos_data.data(), pos_byte_len);
   std::memcpy(buffer.data.data() + nor_byte_offset, nor_data.data(), nor_byte_len);
   std::memcpy(buffer.data.data() + tex_byte_offset, tex_data.data(), tex_byte_len);
@@ -135,7 +134,7 @@ void export_to_gltf(const ReconstructionResult& result,
   // Accessors for positions, normals, texture coordinates, and indices
   // ==========================================
 
-  model.accessors.push_back(create_accessor(0, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, result.mesh_vertices.size(), TINYGLTF_TYPE_VEC3, 
+  model.accessors.push_back(create_accessor(0, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, result.mesh_vertices.size(), TINYGLTF_TYPE_VEC3,
     {pos_min.x, pos_min.y, pos_min.z}, {pos_max.x, pos_max.y, pos_max.z}));
   model.accessors.push_back(create_accessor(1, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, result.mesh_vertices.size(), TINYGLTF_TYPE_VEC3));
   model.accessors.push_back(create_accessor(2, 0, TINYGLTF_COMPONENT_TYPE_FLOAT, result.mesh_vertices.size(), TINYGLTF_TYPE_VEC2));
@@ -146,15 +145,15 @@ void export_to_gltf(const ReconstructionResult& result,
   // ==========================================
   auto mesh = tinygltf::Mesh{};
   mesh.name = "HouseModel";
-  for (const auto& prim_range : result.primitives) 
+  for (const auto& prim_range : result.primitives)
   {
     auto acc_idx = tinygltf::Accessor{};
     acc_idx.bufferView = 3;
-    acc_idx.byteOffset = prim_range.index_offset * sizeof(u32); 
+    acc_idx.byteOffset = prim_range.index_offset * sizeof(u32);
     acc_idx.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
     acc_idx.count = static_cast<i32>(prim_range.index_count);
     acc_idx.type = TINYGLTF_TYPE_SCALAR;
-    
+
     int current_idx_acc_id = static_cast<int>(model.accessors.size());
     model.accessors.push_back(std::move(acc_idx));
 
@@ -165,9 +164,9 @@ void export_to_gltf(const ReconstructionResult& result,
     primitive.indices = current_idx_acc_id;
     primitive.mode = TINYGLTF_MODE_TRIANGLES;
 
-    if (prim_range.material == MaterialType::Floor) 
+    if (prim_range.material == MaterialType::Floor)
       primitive.material = 0; // "Floor_Mat"
-    else 
+    else
       primitive.material = 1; // "Wall_And_Ceil_Mat"
 
     mesh.primitives.push_back(std::move(primitive));
@@ -189,7 +188,7 @@ void export_to_gltf(const ReconstructionResult& result,
 
   auto gltf = tinygltf::TinyGLTF{};
   bool ok = gltf.WriteGltfSceneToFile(&model, output_path.string(), false, false, true, false);
-  if (!ok) 
+  if (!ok)
     throw std::runtime_error(std::format("Failed to write GLTF file: {}", output_path.string()));
 }
 
@@ -213,13 +212,15 @@ void export_opening_placeholders(const ReconstructionResult& result, const std::
   }
   j_config["openings"] = j_openings;
 
-  if (auto file = std::ofstream(filename); file.is_open()) 
+  if (auto file = std::ofstream(filename); file.is_open())
   {
     file << j_config.dump(2);
     file.close();
-  } 
-  else 
+  }
+  else
   {
     g_logger.push_message({ std::format("Error on opening file: {}", filename.string()), LogLevel::Error });
   }
 }
+
+#endif

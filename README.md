@@ -51,7 +51,7 @@ conan install . \
 Configure CMake using the Conan toolchain:
 
 ```bash
-cmake -S . -B ./build -DCMAKE_TOOLCHAIN_FILE=build/build/Debug/generators/conan_toolchain.cmake
+cmake -S . -B ./build -DCMAKE_TOOLCHAIN_FILE=build/build/Debug/generators/conan_toolchain.cmake -DCMAKE_PREFIX_PATH=build/build/Debug/generators
 ```
 
 Compile the project:
@@ -72,7 +72,7 @@ pip install -r requirements.txt
 Launch the program by passing the JSON configuration file as an argument:
 
 ```bash
-./build/Plan2Scene cad/house_plan/Simple_House_Plan.json
+./build/Floorplan3D cad/house_plan/Simple_House_Plan.json
 ```
 
 To generate the blender file, run the following command:

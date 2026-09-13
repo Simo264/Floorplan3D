@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Plan2Scene)
+project(Floorplan3D)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,10 +50,9 @@ add_executable(${PROJECT_NAME}
   
   src/main.cpp
   src/types.cpp
-  src/globals.cpp
   src/reconstruction.cpp
   src/dump.cpp
-  src/geometry.cpp
+  src/misc.cpp
   src/spatial_hashing.cpp
   src/arrangement.cpp
 )

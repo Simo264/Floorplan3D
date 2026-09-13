@@ -6,5 +6,6 @@ __pycache__/
 
 build/
 venv/
+.venv/
 out/
 compile_commands.json

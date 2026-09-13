@@ -1,41 +1,41 @@
-#pragma once
+// #pragma once
 
-#include "../types.hpp"
-#include "../reconstruction.hpp"
+// #include "../types.hpp"
+// #include "../reconstruction.hpp"
 
-#include <string_view>
+// #include <string_view>
 
-class Texture;
-class StaticMesh;
-class Camera;
-struct Transformation;
+// class Texture;
+// class StaticMesh;
+// class Camera;
+// struct Transformation;
 
-struct ViewportInfo
-{
-  i32 width, height;
-  glm::vec2 screen_pos;
-  f32 aspect;
-};
+// struct ViewportInfo
+// {
+//   i32 width, height;
+//   glm::vec2 screen_pos;
+//   f32 aspect;
+// };
 
-struct GLFWwindow* init_window_context(i32 width, 
-                                       i32 height);
+// struct GLFWwindow* init_window_context(i32 width,
+//                                        i32 height);
 
-void setup_docking();
+// void setup_docking();
 
-ViewportInfo viewport_panel(Texture viewport_image, 
-                            bool flip_viewport_image);
+// ViewportInfo viewport_panel(Texture viewport_image,
+//                             bool flip_viewport_image);
 
-void console_panel(GLFWwindow* window, 
-                   ReconstructionStage& current_stage, 
-                   std::atomic<ThreadState>& worker_state);
+// void console_panel(GLFWwindow* window,
+//                    ReconstructionStage& current_stage,
+//                    std::atomic<ThreadState>& worker_state);
 
-void mesh_details_overlay(const StaticMesh& mesh, glm::vec2 viewport_pos);
+// void mesh_details_overlay(const StaticMesh& mesh, glm::vec2 viewport_pos);
 
-void properties_panel();
+// void properties_panel();
 
-void scene_panel(Camera& camera, 
-                 Transformation& mesh_transform, 
-                 glm::vec3 &light_position, 
-                 f32& light_power);
+// void scene_panel(Camera& camera,
+//                  Transformation& mesh_transform,
+//                  glm::vec3 &light_position,
+//                  f32& light_power);
 
-void render_gui();
+// void render_gui();
