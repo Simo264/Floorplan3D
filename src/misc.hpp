@@ -48,4 +48,4 @@ void close_wall_gap(glm::dvec2 gap_start,
                     std::vector<Edge>& edges,
                     f64 width_scale);
 
-// OpeningInstance compute_opening_instance(const Face& face, OpeningType type, f32 z_min, f32 z_max);
+OpeningInstance compute_opening_instance(const Face& face, OpeningType type, f32 z_min, f32 z_max);

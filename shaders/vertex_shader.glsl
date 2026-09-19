@@ -9,7 +9,7 @@ layout(location = 1) out vec2 vs_out_text_coord;
 layout(location = 2) out vec3 vs_out_frag_world_space;
 
 layout(location = 0) uniform mat4 mat_transform;
-layout(location = 1) uniform mat4 mat_cam; 
+layout(location = 1) uniform mat4 mat_cam;
 layout(location = 2) uniform mat4 mat_per;
 
 void main()
@@ -22,7 +22,7 @@ void main()
   vec4 p_camera_space = mat_cam * p_world_space;
   // camera to clip space (camera to perspective)
   vec4 p_clip_space = mat_per * p_camera_space;
-  
+
   // normal transformation for non-uniform scaling: N = (M^-1)^T
   mat3 normal_matrix = transpose(inverse(mat3(mat_transform)));
   vec3 normal_world_space = normal_matrix * in_normal;

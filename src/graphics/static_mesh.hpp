@@ -14,7 +14,7 @@ struct PrimitiveRange
 class StaticMesh 
 {
 public:
-	StaticMesh(const Vertex_PNT* vertices, u32 nr_vertices, const u32* indices, u32 nr_indices);
+	StaticMesh(const Vertex* vertices, u32 nr_vertices, const u32* indices, u32 nr_indices);
 	// clear VRAM memory
   ~StaticMesh();
 	

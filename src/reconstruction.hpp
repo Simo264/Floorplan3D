@@ -2,42 +2,29 @@
 
 #include "types.hpp"
 #include "spatial_hashing.hpp"
-#include "arrangement.hpp"
+#include "io/config_loader.hpp"
 #include "graphics/static_mesh.hpp"
 
 #include <vector>
 #include <filesystem>
 
-// struct ReconstructionResult
-// {
-//   std::vector<Vertex_PNT> mesh_vertices;
-//   std::vector<u32> mesh_indices;
-//   std::vector<PrimitiveRange> primitives;
-//   std::vector<OpeningInstance> openings;
-// };
-
-// struct ReconstructionContext
-// {
-//   std::vector<Segment> walls, doors, windows;
-
-//   SpatialHash hash;
-//   std::vector<Edge> edges;
-
-//   std::vector<glm::dvec2> sample_points;
-//   std::vector<std::vector<u32>> clusters;
-
-//   Arrangement arrangement;
-//   std::vector<Face> faces;
-// };
-
 struct ParsingResult
 {
   std::vector<Segment> walls, doors, windows;
 };
+
 struct SnappingResult
 {
   SpatialHash hash;
   std::vector<Edge> edges;
+};
+
+struct ReconstructionResult
+{
+  std::vector<Vertex> mesh_vertices;
+  std::vector<u32> mesh_indices;
+  std::vector<PrimitiveRange> primitives;
+  std::vector<OpeningInstance> openings;
 };
 
 ParsingResult parse_dxf(bool verbose, const std::filesystem::path& file, f64 unit_scale);
@@ -52,8 +39,4 @@ void windows_reconstruction(std::vector<glm::dvec2>& sample_points,
                             std::vector<Edge>& edges,
                             f32 window_width);
 
-
-// namespace Reconstruction
-// {
-//   ReconstructionResult build_mesh(const std::vector<Face>& faces);
-// };
+ReconstructionResult build_mesh(const std::vector<Face>& faces, const Config& config);

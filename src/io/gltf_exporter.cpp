@@ -2,8 +2,10 @@
 
 #include "../types.hpp"
 #include "../reconstruction.hpp"
+
 #include <vector>
 #include <stdexcept>
+#include <fstream>
 
 #include <tiny_gltf.h>
 #include <glm/common.hpp>
@@ -51,10 +53,7 @@ static tinygltf::Accessor create_accessor(i32 buffer_view,
   return acc;
 }
 
-#if 0
-
-void export_to_gltf(const ReconstructionResult& result,
-                    const std::filesystem::path& output_path)
+void export_to_gltf(const ReconstructionResult& result, const std::filesystem::path& output_path)
 {
   auto model = tinygltf::Model{};
   model.asset.version = "2.0";
@@ -218,9 +217,5 @@ void export_opening_placeholders(const ReconstructionResult& result, const std::
     file.close();
   }
   else
-  {
-    g_logger.push_message({ std::format("Error on opening file: {}", filename.string()), LogLevel::Error });
-  }
+    throw std::runtime_error(std::format("Error on opening file: {}", filename.string()));
 }
-
-#endif

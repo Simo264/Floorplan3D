@@ -147,8 +147,6 @@ VertexId get_adjacent_vertex(glm::dvec2 wall_dir,
 }
 
 
-
-#if 0
 OpeningInstance compute_opening_instance(const Face& face,
                                          OpeningType type,
                                          f32 z_min,
@@ -189,4 +187,3 @@ OpeningInstance compute_opening_instance(const Face& face,
   op.thickness = static_cast<f32>(glm::distance(p2, p3));
   return op;
 }
-#endif

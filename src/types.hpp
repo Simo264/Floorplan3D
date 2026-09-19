@@ -65,7 +65,7 @@ struct Edge
   SegmentLayer layer;
 };
 
-struct Vertex_PNT
+struct Vertex
 {
   glm::vec3 position;
   glm::vec3 normal;
@@ -86,21 +86,21 @@ public:
 
   // Extrudes a 2D face into a 3D quad-based.
   // Creates four vertices for each edge of the contour, calculates the outward-facing normal based on the edge direction
-  void extrude(std::vector<Vertex_PNT>& out_vertices,
+  void extrude(std::vector<Vertex>& out_vertices,
                std::vector<u32>& out_indices,
                f32 base_height, 
                f32 top_height, 
                f32 texture_scaling = 1.0f) const;
 
   // Triangulates a polygonal face
-  void triangulate(std::vector<Vertex_PNT>& out_vertices,
+  void triangulate(std::vector<Vertex>& out_vertices,
                    std::vector<u32>& out_indices,
                    f32 height,
                    f32 texture_scaling,
                    bool facing_up) const;
 
 private:
-  void perform_triangulation(std::vector<Vertex_PNT>& out_vertices,
+  void perform_triangulation(std::vector<Vertex>& out_vertices,
                              std::vector<u32>& out_indices,
                              const std::vector<p2t::Triangle*> triangles,
                              f32 height,
@@ -151,7 +151,7 @@ struct BoundingBox3D
 {
   BoundingBox3D() : min{}, max{} {}
   // Calculates the bounding box for 3D points
-  BoundingBox3D(const std::vector<Vertex_PNT>& vertices);
+  BoundingBox3D(const std::vector<Vertex>& vertices);
   
   glm::vec3 min, max;
 };

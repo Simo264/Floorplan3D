@@ -28,11 +28,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(libdxfrw)
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/externals/glad")
-add_subdirectory("${CMAKE_SOURCE_DIR}/externals/imgui")
 add_subdirectory("${CMAKE_SOURCE_DIR}/externals/tinygltf/")
 add_subdirectory("${CMAKE_SOURCE_DIR}/externals/SimpleDBSCAN/")
 
-add_executable(${PROJECT_NAME} 
+add_executable(${PROJECT_NAME}
   src/io/drw_parser.cpp
   src/io/gltf_exporter.cpp
   src/io/config_loader.cpp
@@ -40,14 +39,12 @@ add_executable(${PROJECT_NAME}
   src/graphics/buffer.cpp
   src/graphics/pipeline.cpp
   src/graphics/vertex_array.cpp
-  src/graphics/framebuffer.cpp 
+  src/graphics/framebuffer.cpp
   src/graphics/texture.cpp
   src/graphics/camera.cpp
   src/graphics/static_mesh.cpp
   src/graphics/transformation.cpp
 
-  src/gui/gui.cpp
-  
   src/main.cpp
   src/types.cpp
   src/reconstruction.cpp
@@ -55,6 +52,7 @@ add_executable(${PROJECT_NAME}
   src/misc.cpp
   src/spatial_hashing.cpp
   src/arrangement.cpp
+  src/mesh_visualizer.cpp
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -68,7 +66,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   poly2tri::poly2tri
   CGAL::CGAL
 
-  imgui::imgui
   tiny_gltf::tiny_gltf
   simple_dbscan::simple_dbscan
   nlohmann_json::nlohmann_json
@@ -76,8 +73,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${libdxfrw_SOURCE_DIR}/src)
 
-target_compile_options(${PROJECT_NAME} PRIVATE 
-  -Wall 
-  -Wextra 
+target_compile_options(${PROJECT_NAME} PRIVATE
+  -Wall
+  -Wextra
   -Wpedantic
 )

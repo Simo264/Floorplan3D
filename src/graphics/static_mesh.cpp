@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <stdexcept>
 
-StaticMesh::StaticMesh(const Vertex_PNT* vertices, u32 nr_vertices, const u32* indices, u32 nr_indices) : 
+StaticMesh::StaticMesh(const Vertex* vertices, u32 nr_vertices, const u32* indices, u32 nr_indices) : 
 	nr_vertices{ nr_vertices },
 	nr_indices{ nr_indices }
 {
@@ -14,18 +14,18 @@ StaticMesh::StaticMesh(const Vertex_PNT* vertices, u32 nr_vertices, const u32* i
 	   throw std::runtime_error("Invalid indices data for StaticMesh!");
 	
 	vbo.create();
-	vbo.allocate_storage(nr_vertices * sizeof(Vertex_PNT), vertices, BufferUsageFlags::DynamicStorage);
+	vbo.allocate_storage(nr_vertices * sizeof(Vertex), vertices, BufferUsageFlags::DynamicStorage);
 	
 	ibo.create();
 	ibo.allocate_storage(nr_indices * sizeof(u32), indices, BufferUsageFlags::DynamicStorage);	
 
 	vao.create();
   // Attribute 0: position(xyz)
-  vao.set_attrib_format_float(0, 3, VertexAttribType::Float, false, offsetof(Vertex_PNT, position));
+  vao.set_attrib_format_float(0, 3, VertexAttribType::Float, false, offsetof(Vertex, position));
   // Attribute 1: normal(x,y,z)
-  vao.set_attrib_format_float(1, 3, VertexAttribType::Float, true, offsetof(Vertex_PNT, normal));
+  vao.set_attrib_format_float(1, 3, VertexAttribType::Float, true, offsetof(Vertex, normal));
   // Attribute 2: text_coord(u,v)
-  vao.set_attrib_format_float(2, 2, VertexAttribType::Float, false, offsetof(Vertex_PNT, text_coord));
+  vao.set_attrib_format_float(2, 2, VertexAttribType::Float, false, offsetof(Vertex, text_coord));
   
   vao.link_attrib(0, 0);
   vao.link_attrib(1, 0); 
@@ -34,7 +34,7 @@ StaticMesh::StaticMesh(const Vertex_PNT* vertices, u32 nr_vertices, const u32* i
   vao.enable_attrib(1);
   vao.enable_attrib(2);
 
-  vao.attach_vertex_buffer(0, vbo, 0, sizeof(Vertex_PNT));
+  vao.attach_vertex_buffer(0, vbo, 0, sizeof(Vertex));
  	vao.attach_index_buffer(ibo);
 }
 
