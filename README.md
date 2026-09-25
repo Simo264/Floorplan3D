@@ -62,14 +62,56 @@ cmake --build ./build/ --parallel 8
 
 ## Run
 
-Before executing the program, create and activate a Python virtual environment (used for visualisation scripts):
-
+Create a Python virtual environment
 ```bash
-python -m venv venv
-source venv/bin/activate.fish
-pip install -r requirements.txt
+uv venv
 ```
-Launch the program by passing the JSON configuration file as an argument:
+
+Using the virtual environment:
+```bash
+source .venv/bin/activate
+```
+
+Install the required Python packages:
+```bash
+uv pip install -r requirements.txt
+```
+
+The C++ program reads all its parameters from a **JSON configuration file**.
+Each CAD model requires its own configuration file, as parameters may vary depending on the drawing scale, geometry complexity, and desired output quality. Example:
+
+```json
+{
+  "dxf_filename": "draftperson_Floor_Plan.dxf",
+  "unit_scale": 0.01,
+  
+  "ceil_height": 3.5,
+  "door_width": 1.2,
+  "door_height": 2.1,
+  
+  "window_sill_height": 0.25,
+  "window_height": 3.3,
+  "window_width": 5.0,
+
+  "snap_eps": 1e-2,
+  "cluster_num_samples": 15,
+  "cluster_eps": 2,
+
+  "floor_texture_scaling": 2.0,
+  "wall_texture_scaling": 2.0
+}
+```
+
+- *dxf_filename*: path to the input DXF file.
+- *unit_scale*: conversion factor from DXF drawing units to meters (e.g., 0.01 if the drawing is in centimeters).
+- *ceil_height*: height of the ceiling in meters.
+- *door_width*, door_height: target dimensions for doors.
+- *window_sill_height*: distance from floor to window sill.
+- *window_height*, window_width: target dimensions for windows.
+- *snap_eps*: tolerance for vertex snapping (in meters).
+- *cluster_num_samples*: minimum points for DBSCAN clustering.
+- *cluster_eps*: maximum distance for DBSCAN clustering.
+- *floor_texture_scaling*, wall_texture_scaling: scaling factors for UV coordinates to repeat textures.
 
 ```bash
 ./build/Floorplan3D cad/house_plan/Simple_House_Plan.json

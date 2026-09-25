@@ -19,20 +19,6 @@
 #include <glm/trigonometric.hpp>
 #include <glm/geometric.hpp>
 
-
-static auto create_floor_face(BoundingBox2D house_bbox)
-{
-  auto floor_face = Face{};
-  floor_face.vertices = {
-    glm::dvec2(house_bbox.min.x, house_bbox.min.y),
-    glm::dvec2(house_bbox.max.x, house_bbox.min.y),
-    glm::dvec2(house_bbox.max.x, house_bbox.max.y),
-    glm::dvec2(house_bbox.min.x, house_bbox.max.y)
-  };
-  floor_face.type = FaceType::Floor;
-  return floor_face;
-}
-
 int main(int argc, char** argv)
 {
   if (argc != 2)
@@ -48,7 +34,7 @@ int main(int argc, char** argv)
   std::println("\n=========== Step 1: parsing ===========\n");
   std::println("DXF file {} ...", config.dxf_path.string());
   ParsingResult parsing_result = parse_dxf(false, config.dxf_path, config.unit_scale);
-  auto house_bbox = BoundingBox2D(parsing_result.walls);
+
   dump_segments_csv(parsing_result.walls, "out/walls.csv");
   dump_segments_csv(parsing_result.doors, "out/doors.csv");
   dump_segments_csv(parsing_result.windows, "out/windows.csv");
@@ -184,11 +170,20 @@ int main(int argc, char** argv)
   // =======================================================
   std::println("\n=========== Step 5: face extraction ===========\n");
   auto arrangement = build_arrangement(hash.vertices(), edges);
+  auto faces = extract_faces(arrangement);
+  auto wall_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Wall; });
+  auto door_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Door; });
+  auto window_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Window; });
+  auto floor_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Floor; });
+
   std::println("- Number of faces: {}", arrangement.number_of_faces());
   std::println("- Number of vertices: {}", arrangement.number_of_vertices());
   std::println("- Number of edges: {}", arrangement.number_of_edges());
-  auto faces = extract_faces(arrangement);
   std::println("- Number of extracted faces: {}", faces.size());
+  std::println("- Number of floor faces: {}", std::ranges::distance(floor_faces));
+  std::println("- Number of wall faces: {}", std::ranges::distance(wall_faces));
+  std::println("- Number of door faces: {}", std::ranges::distance(door_faces));
+  std::println("- Number of window faces: {}", std::ranges::distance(window_faces));
 
   dump_faces_csv(faces, "out/faces.csv");
   output_name = std::format("out/faces_{:04d}.png", counter++);
@@ -199,10 +194,20 @@ int main(int argc, char** argv)
   // Step 6: mesh building
   // =======================================================
   std::println("\n=========== Step 6: mesh building ===========\n");
-  // remove all FLOOR faces and push only one quad for floor
+
+  // remove all FLOOR faces and replace with a single quad for floor
   std::erase_if(faces, [](auto face) { return face.type == FaceType::Floor; });
-  auto floor_face = create_floor_face(house_bbox);
+  auto house_bbox = BoundingBox2D(parsing_result.walls);
+  auto floor_face = Face{};
+  floor_face.type = FaceType::Floor;
+  floor_face.vertices = {
+    glm::dvec2(house_bbox.min.x, house_bbox.min.y),
+    glm::dvec2(house_bbox.max.x, house_bbox.min.y),
+    glm::dvec2(house_bbox.max.x, house_bbox.max.y),
+    glm::dvec2(house_bbox.min.x, house_bbox.max.y)
+  };
   faces.push_back(std::move(floor_face));
+
   auto build_result = build_mesh(faces, config);
   auto num_vertices = build_result.mesh_vertices.size();
   auto num_indices = build_result.mesh_indices.size();

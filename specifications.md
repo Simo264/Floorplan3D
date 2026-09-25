@@ -1,104 +1,66 @@
-## Introduction
+L'obiettivo del progetto è creare un programma C++ che prenda come input un modello CAD 2D di una planimetria di una stanza o appartamento e creare una mesh 3D con i seguenti attributi: posizione, normale, tex coordinate. La mesh sarà esporta in formato GLTF. Il modello non deve contenere materiali.
 
-The goal of the project is to create a C++ program that takes as input a 2D CAD model, in DXF format, of a plan of a room/apartment with walls, windows, doors, and to create as a final result a 3D mesh of the room/apartment.
+Una volta esportato il file gltf, abbiamo uno script Python che genera la scena in Blender del modello. Qua vengono applicati i materiali, caricati gli asset delle porte e delle finestre, impostata camera, le luci, e altri parametri. Alla fine si procede con il rendering fotorealistico con Cycles.
 
-The model will be exported in GLTF format with attributes: position (xyz) normal (xyz) texture coordinates (uv). The GLTF model shall not contain materials.
+# Assunzioni
+La cosa più difficile di questo progetto è la mancanza di un unico standard tra i modelli CAD, il che rende molto difficile creare un algoritmo in grado di generalizzare tutti i modelli.
 
-Once the gltf file has been exported, we run the python script `generate_blender_scene.py` to generate the scene in Blender.
-At this point, we can import the mesh into Blender, set the camera, lights, materials, and other parameters, and proceed with rendering from the GUI.
+Ecco perché dobbiamo fare delle assunzioni: i muri devono già essere dei poligoni chiusi con un proprio spessore. Non posso avere una muro "rotto". Le porte e le finestre devono essere rappresentate come fori nelle pareti. I nomi dei layer e dei blocchi devono rispettare la stessa convenzione. Per i layer:
+- A-WALL, A-DOOR, A-WINDOW
 
-## From plan to mesh
+Per i blocchi:
+- BLOCK-DOOR-[0-9], BLOCK-WINDOW-[0-9]
 
-The most difficult thing about this project is the lack of a single standard among CAD models, which makes it very difficult to create an algorithm that can generalize all models.
+Inoltre verranno ignorati gli arredamenti. Sono presi in considerazione solo i muri, le porte e le finestre.
 
-That's why we need to make assumptions: walls must already be closed faces with their own thickness. Important: Every face of the wall must be closed, I can't have a crack in a wall.
-The walls will be extruded, the doors and windows will be represented as holes in walls.
+# Preprocessing
+Prima ancora di eseguire il programma sarà necessario aprire il modello con un software come LibreCAD per renderlo consistente: correggere i nomi dei layer, dei blocchi, aggiungere segmenti per chiudere i poligoni dei muri, rimuovere del rumore dal modello.
 
-##### Preprocessing
+# Parsing
+Si raccolgono tutte le primitive (segmenti, polilinee, ecc.) riguardanti i muri, le porte e le finstre.
 
-Even before running the program you will need to open the model with software like LibreCAD to make it suitable: the layer names must be correct, if necessary close cracks in the faces of the walls, add any new vertices and segments, or modify the windows.
+Le pareti sono molto spesso rappresentate come segmenti o come polilinee. 
 
-##### Parsing
+Molto spesso le porte puntano allo stesso BLOCCO, che può essere lo stesso arco. Ma può accadere che una porta sia anche un insieme di segmenti o polilinee (nel caso delle porte di ingresso). 
 
-At this stage we need to collect all the information regarding walls, doors and windows.
-Walls are very often represented as segments or as polylines. 
-Doors very often point to the same BLOCK, which can be the same arc. But it can happen that a port is also a set of segments or polylines (in the case of input ports). 
-Windows, like doors, can point to the same BLOCK. Windows can be represented in many different ways, but typically they are represented as segments.
+Le finestre, come le porte, possono puntare allo stesso BLOCCO. Le finestre possono essere rappresentate in molti modi diversi, ma in genere sono rappresentate come segmenti.
 
-*Hint: Door and window information serves us more as a placeholder than as actual geometry.*
+# Vertex snapping
+Questo viene fatto solo sui poligoni dei muri, e non invece sulle porte e le finestre che come vedremo dopo saranno trattate in modo diverso.
 
-##### Vertex snapping
+Viene utilizzata la struttura dati SpatialHash. I vertici vicini che sono inferiori a $\epsilon$ vengono compressi in un unico vertice. Questo passaggio è particolarmente utile sia per ridurre il numero di vertici da elaborare successivamente, sia per correggere eventuali problemi con vertici sovrapposti che potrebbero portare a problemi durante la creazione del grafo.
 
-Only the primitives of the walls are processed. Neighboring vertices that are less than $\epsilon$ are collapsed into a single vertex. The SpatialHash data structure is used.
-This step is particularly useful both to reduce the number of vertices to be processed after, and to correct any problems with overlapping vertices that could lead to problems during graph creation and consequently face extraction.
+# Ricostruzione varchi
+Qui bisogna chiudere i varchi per ricostruire poligoni semplici relativi a porte e finestre.
 
-##### Gaps reconstruction
+Per quanto riguarda le porte, conosciamo solo i segmenti che collegano i due bordi delle pareti. Per creare un poligono chiuso dobbiamo calcolare il secondo segmento parallelo.
+Se una porta è rappresentata da una polilinea o da una serire di segmenti (come una porta di ingresso), prendiamo semplicemente uno dei due lati lunghi e calcoliamo il secondo segmento parallelo.
 
-Here we need to close the holes to reconstruct the faces relating to doors and windows.
+Le finestre, invece, sono più variabili e possono essere rappresentate in molti modi. Per questo motivo, l’approccio ideale si baserebbe sul clustering spaziale e sull’estrazione dei bounding box. Ogni cluster di punti rappresenterà una finestra; da ogni cluster calcolerò il riquadro di delimitazione ed estrarrò da esso un singolo segmento. Per fare ciò, considero semplicemente uno dei due lati lunghi del box, trovo i due vertici delle pareti e per derivare il secondo segmento seguo la procedura sopra descritta.
 
-As for the doors, we only know the segments that connect the two edges of the walls. To create a face we need to calculate the second parallel segment.
-From that single segment, we can derive the other two vertices. It's actually quite simple.
+# PSLG + Half Edge 
+Dopo che abbiamo costruito una rappresentazione completa della stanza/appartamento con poligoni dei muri, poligoni delle porte e poligoni delle finstre, andiamo a costruire un grafo planare PSLG.
 
-If a door is represented by a polyline (a closed rectangle), we simply take one of the two long sides, and calculate the second parallel segment.
+Questo ci serve per estrarre e classificare ogni singola faccia. Devo sapere se una faccia rappresenta un muro, una porta o una finestra.
+Perché in base a quello devo gestire l'estrusione in modo diverso: un muro viene estruso fino al soffitto, una porta viene estrusa solo nella parte superiore per creare il buco inferiore per inserirci l'asset della porta, una finestra viene estrusa sia dal basso che dall'alto in modo da creare un buco centrale.
 
-Windows, on the other hand, are more variable and can be represented in many ways. For this reason, the ideal approach would be based on spatial clustering and bounding box extraction. Each cluster of points will represent a window; from each cluster, I will calculate the bounding box and extract a single segment from it. To do this, I simply consider one of the two long sides of the box, using the Spatial Hashing structure I find the two vertices of the walls, and to derive the second segment I follow the procedure above.
 
-##### Planar straight line graph and faces extraction
+# Creazione mesh
+Per ottenere i vertici e gli indici necessari per costruire la mesh dobbiamo eseguire delle triangolazioni sulle facce. Utilizzo l'algoritmo di Delaunay vincolato.
 
-The PSLG graph we need to extract the faces, which we will need during triangulation and extrusion.
-Furthermore, it will also be necessary to classify each face: is it a face of a wall? is this a door face? or is it a window face? We need to know why the extrusion will be different based on the type: a wall will be extruded up to the ceiling, a door will be extruded from 80% to 100% of the height, a window will be extruded from the floor up to 20% of the height and even from 80 to 100% to have a hole in the wall.
+Qua si procede con l'estrusione delle facce, calcolo delle normali e calcolo delle texture coordinate.
 
-##### Triangulation and extrusion
+# Esportazione
+Alla fine si esporta il modello in formato GLTF
 
-To obtain the vertices and indices needed to build the mesh we need to perform triangulations on the faces. We use the Delaunay triangulation method.
-Furthermore, the normal vectors and the textures coordinates will be calculated here.
+# Rendering
+Si eseguo lo script Python e si genera la scena Blender con la mesh, i materiali applicati, assets di porte/finestre, camera, luci e rendering con Cycles.
 
-##### Exporting
 
-Finally we get a 3D mesh with: position (xyz), normal (xyz) and textures coordinates (uv).
-We are ready to export in GLTF format.
-
-### Libraries
-
-  - Parsing with `libdxfrw`
-  - DBSCAN algorithm with `SimpleDBSCAN`
-  - Planar Straight-Line Graph with `CGAL`
-  - Polygon triangulation with `poly2tri`
-
-  ## Definition of parameters
-  
-  The C++ program reads all its parameters from a **JSON configuration file**.
-  Each CAD model requires its own configuration file, as parameters may vary depending on the drawing scale, geometry complexity, and desired output quality. Example:
-  
-  ```json
-  {
-    "dxf_filename": "draftperson_Floor_Plan.dxf",
-    "unit_scale": 0.01,
-    
-    "ceil_height": 3.5,
-    "door_width": 1.2,
-    "door_height": 2.1,
-    
-    "window_sill_height": 0.25,
-    "window_height": 3.3,
-    "window_width": 5.0,
-  
-    "snap_eps": 1e-2,
-    "cluster_num_samples": 15,
-    "cluster_eps": 2,
-  
-    "floor_texture_scaling": 2.0,
-    "wall_texture_scaling": 2.0
-  }
-  ```
-  
-  - *dxf_filename*: path to the input DXF file.
-  - *unit_scale*: conversion factor from DXF drawing units to meters (e.g., 0.01 if the drawing is in centimeters).
-  - *ceil_height*: height of the ceiling in meters.
-  - *door_width*, door_height: target dimensions for doors.
-  - *window_sill_height*: distance from floor to window sill.
-  - *window_height*, window_width: target dimensions for windows.
-  - *snap_eps*: tolerance for vertex snapping (in meters).
-  - *cluster_num_samples*: minimum points for DBSCAN clustering.
-  - *cluster_eps*: maximum distance for DBSCAN clustering.
-  - *floor_texture_scaling*, wall_texture_scaling: scaling factors for UV coordinates to repeat textures.
+# Librarie e Software
+- LibreCAD
+- Blender
+- Parsing: `libdxfrw`
+- DBSCAN:  `SimpleDBSCAN`
+- Half-Edge: `CGAL`
+- CDT: `poly2tri`

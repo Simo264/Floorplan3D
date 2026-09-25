@@ -152,32 +152,49 @@ ReconstructionResult build_mesh(const std::vector<Face>& faces, const Config& co
   auto wall_tex_scaling    = config.wall_texture_scaling;
   auto floor_tex_scaling   = config.floor_texture_scaling;
 
+  auto wall_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Wall; });
+  auto door_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Door; });
+  auto window_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Window; });
+  auto floor_faces = std::ranges::views::filter(faces, [](auto face) { return face.type == FaceType::Floor; });
+
   // =======================
-  // Create floor plan
+  // Triangulate floor and ceiling
   // =======================
-  auto floor_face = std::ranges::find_if(faces, [](const Face& f) { return f.type == FaceType::Floor; });
-  floor_face->triangulate(mesh_vertices, mesh_floor_indices, 0.f, floor_tex_scaling, true);
-  floor_face->triangulate(mesh_vertices, mesh_wall_indices, ceil_height + 0.01, wall_tex_scaling, false);
+  for(const auto& face : floor_faces)
+  {
+    // triangulate floor
+    face.triangulate(mesh_vertices, mesh_floor_indices, 0.f, floor_tex_scaling, true);
+    // triangulate ceiling
+    face.triangulate(mesh_vertices, mesh_wall_indices, ceil_height, wall_tex_scaling, false);
+  }
 
   // =======================
   // Extrude walls
   // =======================
-  auto wall_faces = std::ranges::views::filter(faces, [](const Face& f) { return f.type == FaceType::Wall; });
   for(const auto& face : wall_faces)
   {
-    face.triangulate(mesh_vertices, mesh_wall_indices, 0.f, wall_tex_scaling, false);
     face.extrude(mesh_vertices, mesh_wall_indices, 0.f, ceil_height, wall_tex_scaling);
+
+    // triangulate floor
+    //face.triangulate(mesh_vertices, mesh_wall_indices, 0.f, wall_tex_scaling, false);
+    // triangulate ceiling
+    // face.triangulate(mesh_vertices, mesh_wall_indices, ceil_height, wall_tex_scaling, true);
   }
 
   // =======================
   // Extrude doors
   // =======================
-  auto door_faces = std::ranges::views::filter(faces, [](const Face& f) { return f.type == FaceType::Door; });
-  std::println("{} door faces found!", std::ranges::distance(door_faces));
   for(const auto& face : door_faces)
   {
-    face.triangulate(mesh_vertices, mesh_wall_indices, door_height, wall_tex_scaling, false);
     face.extrude(mesh_vertices, mesh_wall_indices, door_height, ceil_height, wall_tex_scaling);
+
+    // triangulate floor
+    //face.triangulate(mesh_vertices, mesh_wall_indices, 0.f, wall_tex_scaling, false);
+    // triangulate ceiling
+    // face.triangulate(mesh_vertices, mesh_wall_indices, ceil_height, wall_tex_scaling, true);
+
+    // triangulate door
+    face.triangulate(mesh_vertices, mesh_wall_indices, door_height, wall_tex_scaling, false);
 
     auto opening = compute_opening_instance(face, OpeningType::Door, 0.0f, door_height);
     result.openings.push_back(opening);
@@ -186,15 +203,22 @@ ReconstructionResult build_mesh(const std::vector<Face>& faces, const Config& co
   // =======================
   // Extrude windows
   // =======================
-  auto window_faces = std::ranges::views::filter(faces, [](const Face& f) { return f.type == FaceType::Window; });
-  std::println("{} window faces found!", std::ranges::distance(window_faces));
   for(const auto& face : window_faces)
   {
-    face.triangulate(mesh_vertices, mesh_wall_indices, window_sill, wall_tex_scaling, true);
+    // extrude bottom
     face.extrude(mesh_vertices, mesh_wall_indices, 0.0f, window_sill, wall_tex_scaling);
-
-    face.triangulate(mesh_vertices, mesh_wall_indices, window_height, wall_tex_scaling, false);
+    // extrude top
     face.extrude(mesh_vertices, mesh_wall_indices, window_height, ceil_height, wall_tex_scaling);
+
+    // triangulate floor
+    // face.triangulate(mesh_vertices, mesh_wall_indices, 0.f, wall_tex_scaling, false);
+    // triangulate ceiling
+    // face.triangulate(mesh_vertices, mesh_wall_indices, ceil_height, wall_tex_scaling, true);
+
+    // triangulate window_sill
+    face.triangulate(mesh_vertices, mesh_wall_indices, window_sill, wall_tex_scaling, true);
+    // triangulate window_height
+    face.triangulate(mesh_vertices, mesh_wall_indices, window_height, wall_tex_scaling, false);
 
     auto opening = compute_opening_instance(face, OpeningType::Window, window_sill, window_height);
     result.openings.push_back(opening);

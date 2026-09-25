@@ -1,18 +1,18 @@
 {
   "dxf_filename": "draftperson_Floor_Plan.dxf",
-  "unit_scale": 0.01,
-  
-  "ceil_height": 3.5,
+  "unit_scale": 0.0025,
+
+  "ceil_height": 2.7,
   "door_width": 1.2,
   "door_height": 2.1,
-  
-  "window_sill_height": 0.25,
-  "window_height": 3.3,
-  "window_width": 5.0,
 
-  "snap_eps": 1e-2,
-  "cluster_num_samples": 15,
-  "cluster_eps": 2,
+  "window_sill_height": 0.25,
+  "window_height": 2.1,
+  "window_width": 3.0,
+
+  "snap_eps": 0.01,
+  "cluster_num_samples": 30,
+  "cluster_eps": 0.5,
 
   "floor_texture_scaling": 2.0,
   "wall_texture_scaling": 2.0

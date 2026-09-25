@@ -6,7 +6,6 @@
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
 
-
 #include <poly2tri/sweep/cdt.h>
 
 // =========================
