@@ -56,7 +56,6 @@ Alla fine si esporta il modello in formato GLTF
 # Rendering
 Si eseguo lo script Python e si genera la scena Blender con la mesh, i materiali applicati, assets di porte/finestre, camera, luci e rendering con Cycles.
 
-
 # Librarie e Software
 - LibreCAD
 - Blender

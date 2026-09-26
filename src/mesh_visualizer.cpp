@@ -49,7 +49,7 @@ MeshVisualizer::~MeshVisualizer()
 void MeshVisualizer::render(std::shared_ptr<StaticMesh> mesh, const std::vector<PrimitiveRange>& primitives)
 {
   auto floor_texture = Texture::create_from_file("materials/patio_tiles/patio_tiles_diff_1k.jpg");
-  auto wall_texture = Texture::create_from_file("materials/concrete_layers/concrete_layers_diff_1k.jpg");
+  auto wall_texture = Texture::create_from_file("materials/beige_wall/beige_wall_001_diff_1k.jpg");
 
   auto mesh_transform = Transformation{};
   while (!glfwWindowShouldClose(window))

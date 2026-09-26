@@ -4,44 +4,44 @@
   "resolution_y": 720,
   "use_denoising" : true,
   "render_engine": "CYCLES",
-  "output_blender": "out/scene.blend",
+  "output_blender": "out/pincad_SimpleHousePlan.blend",
 
   "model_path": "out/pincad_SimpleHousePlan.gltf",
   "opening_placeholders": "out/pincad_SimpleHousePlan_openings.json",
-  "door_asset": "assets/Wooden_Door.glb",
-  "window_asset": "assets/Classical_Window.glb",
-  "hdri_path": "HDRIs/grasslands_sunset_4k.hdr",
+  "door_asset": "assets/modern_door.glb",
+  "window_asset": "assets/modern_window.glb",
+  "hdri_path": "HDRIs/DayEnvironment_4K.exr",
   "hdri_intensity": 1.0,
 
   "floor_material": {
-    "albedo": "materials/patio_tiles/patio_tiles_diff_1k.jpg",
+    "albedo": "materials/oak_wood_planks/oak_wood_planks_diff_1k.jpg",
     "base_color": [0.8, 0.8, 0.8],
-    "normal": "materials/patio_tiles/patio_tiles_nor_gl_1k.jpg",
+    "normal": "materials/oak_wood_planks/oak_wood_planks_nor_gl_1k.jpg",
     "normal_strength": 1.5,
-    "roughness": "materials/patio_tiles/patio_tiles_rough_1k.jpg",
+    "roughness": "materials/oak_wood_planks/oak_wood_planks_rough_1k.jpg",
     "roughness_value": 0.5,
-    "metallic": "materials/patio_tiles/patio_tiles_metallic_1k.jpg",
+    "metallic": "",
     "metallic_value": 0.0,
-    "displacement": "materials/patio_tiles/patio_tiles_disp_1k.jpg",
+    "displacement": "materials/oak_wood_planks/oak_wood_planks_disp_1k.jpg",
     "disp_scale": 0.05,
-    "ao": "materials/patio_tiles/patio_tiles_ao_1k.jpg",
+    "ao": "materials/oak_wood_planks/oak_wood_planks_ao_1k.jpg",
     "ao_mix_factor": 1.0,
-    "arm": "materials/patio_tiles/patio_tiles_arm_1k.jpg"
+    "arm": ""
   },
 
   "wall_and_ceil_material": {
-    "albedo": "materials/beige_wall/beige_wall_001_diff_1k.jpg",
+    "albedo": "materials/plaster_wall/red_plaster_weathered_diff_1k.jpg",
     "base_color": [0.8, 0.8, 0.8],
-    "normal": "materials/beige_wall/beige_wall_001_nor_gl_1k.jpg",
+    "normal": "materials/plaster_wall/red_plaster_weathered_nor_gl_1k.jpg",
     "normal_strength": 1.5,
     "metallic": "",
     "metallic_value": 0.0,
-    "roughness": "materials/beige_wall/beige_wall_001_rough_1k.jpg",
+    "roughness": "materials/plaster_wall/red_plaster_weathered_rough_1k.jpg",
     "roughness_value": 0.5,
-    "displacement": "materials/beige_wall/beige_wall_001_disp_1k.jpg",
+    "displacement": "materials/plaster_wall/red_plaster_weathered_disp_1k.jpg",
     "disp_scale": 0.05,
-    "ao": "materials/beige_wall/beige_wall_001_ao_1k.jpg",
+    "ao": "materials/plaster_wall/red_plaster_weathered_ao_1k.jpg",
     "ao_mix_factor": 1.0,
-    "arm": "materials/beige_wall/beige_wall_001_arm_1k.jpg"
+    "arm": "materials/plaster_wall/red_plaster_weathered_arm_1k.jpg"
   }
 }

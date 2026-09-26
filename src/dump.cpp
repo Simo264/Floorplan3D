@@ -3,9 +3,13 @@
 #include <fstream>
 #include <iomanip>
 #include <print>
+#include <filesystem>
 
 void run_python_script(std::string_view script_name, std::string_view output_image)
 {
+  if(!std::filesystem::exists("out/"))
+    std::filesystem::create_directory("out/");
+
   auto log_file = std::format("out/{}.log", script_name);
   auto command = std::format("python {} {} > \"{}\" 2>&1", script_name, output_image, log_file);
   auto ret = std::system(command.c_str());
