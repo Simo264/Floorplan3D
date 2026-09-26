@@ -2,7 +2,6 @@ import json
 import sys
 import math
 import bpy
-import mathutils
 import os
 from pathlib import Path
 
@@ -10,7 +9,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
   sys.path.insert(0, script_dir)
 
-from models import Material, BlenderConfig, OpeningInfo
 from utils import (
   load_config,
   load_openings_data,
@@ -24,8 +22,6 @@ from utils import (
   setup_lighting,
 )
 
-# aspect ratio 16:9: (640x360), (960x540), (1280x720)
-
 def main():
   config = load_config(Path("blender_config.json"))
 
@@ -33,7 +29,7 @@ def main():
   bpy.ops.object.select_all(action='SELECT')
   bpy.ops.object.delete()
 
-  # setup rendering engine 
+  # setup rendering engine
   setup_rendering_engine(
     samples=config.samples,
     resolution_x=config.resolution_x,

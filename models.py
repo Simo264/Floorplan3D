@@ -1,8 +1,21 @@
-from typing import List, Tuple, Any, Optional, Dict, Literal
+from typing import List, Optional, Literal
 from pathlib import Path
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator, model_validator
+import re
+
+TEXTURE_KEYWORDS = {
+  "albedo": ["albedo", "diffuse", "diff", "basecolor", "base_color", "color", "col"],
+  "normal": ["normal", "nrm", "nor"],
+  "roughness": ["roughness", "rough", "rgh"],
+  "metallic": ["metallic", "metal", "met"],
+  "displacement": ["displacement", "disp", "height", "hm"],
+  "ao": ["ao", "ambientocclusion", "ambient_occlusion", "occlusion"],
+  "arm": ["arm"],
+}
 
 class Material(BaseModel):
+  directory: Optional[Path] = None
+
   albedo: Optional[Path] = None
   base_color: List[float] = [0.8, 0.8, 0.8]
   normal: Optional[Path] = None
@@ -17,21 +30,57 @@ class Material(BaseModel):
   ao_mix_factor: float = 1.0
   arm: Optional[Path] = None
 
-  @field_validator('albedo', 'normal', 'roughness', 'metallic', 'displacement', 'ao', 'arm', mode='before')
+  @field_validator("directory", mode="before")
   @classmethod
-  def resolve_path(cls, v):
+  def resolve_dir(cls, v):
     if v is None or v == "":
       return None
-    return Path(v).resolve()
+    p = Path(v).resolve()
+    if not p.is_dir():
+      raise ValueError(f"Directory materiale non valida: {p}")
+    return p
+
+  @model_validator(mode="after")
+  def autodiscover_textures(self):
+    """Se è stata fornita una directory, cerca automaticamente le texture
+    solo per i campi non già impostati esplicitamente."""
+    if self.directory is None:
+        return self
+
+    valid_ext = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".exr", ".bmp"}
+    # Costruiamo una mappa: campo -> path trovato
+    found: dict[str, Path] = {}
+    for file in self.directory.iterdir():
+      if not file.is_file() or file.suffix.lower() not in valid_ext:
+          continue
+
+      stem = file.stem.lower()
+      normalized = re.sub(r"[\s\-_\.]+", "", stem)
+
+      for field, keywords in TEXTURE_KEYWORDS.items():
+          if getattr(self, field) is not None:
+              continue
+          if field in found:
+              continue
+
+          if any(kw in normalized for kw in keywords):
+              found[field] = file
+              break
+
+    for field, path in found.items():
+        setattr(self, field, path)
+
+    return self
+
 
 class BlenderConfig(BaseModel):
   # Render
   samples: int
   resolution_x: int
   resolution_y: int
-  use_denoising: bool
+  use_denoising: bool = True
   render_engine: str = "CYCLES"
-  output_blender: Path = Field(default=Path("out/scene.blend"))
+  output_blender: Path = Path("out/scene.blend")
 
   # Assets
   model_path: Path

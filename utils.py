@@ -68,10 +68,10 @@ def setup_rendering_engine(
   if not has_gpu:
     print("No GPU found! Falling back to CPU rendering.")
     scene.cycles.device = 'CPU'
-  
+
   scene.cycles.samples = samples
   scene.cycles.use_denoising = use_denoising
-  
+
   scene.render.resolution_x = resolution_x
   scene.render.resolution_y = resolution_y
 
@@ -101,7 +101,7 @@ def import_model(
 
 @typechecked
 def setup_hdr(
-  hdri_path: Optional[Path], 
+  hdri_path: Optional[Path],
   strength: float = 1.0
 ) -> None:
 
@@ -150,48 +150,48 @@ def setup_camera(
   fov_degrees: float = 45.0,
   camera_name: str = "Camera"
 ) -> None:
- 
+
   if camera_name in bpy.data.objects:
     old_cam = bpy.data.objects[camera_name]
     bpy.data.objects.remove(old_cam, do_unlink=True)
-  
+
   cam_data = bpy.data.cameras.new(camera_name)
   cam_data.lens_unit = 'FOV'
   cam_data.angle_y = math.radians(fov_degrees)
-  
+
   cam_obj = bpy.data.objects.new(camera_name, cam_data)
   bpy.context.collection.objects.link(cam_obj)
-  
+
   cam_obj.location = location
   cam_obj.rotation_euler = mathutils.Euler(rotation, 'XYZ')
-  
+
   bpy.context.scene.camera = cam_obj
   bpy.context.view_layer.update()
 
 @typechecked
 def setup_lighting(
-  point_energy: float = 700.0,
-  point_color: Tuple[float, float, float] = (1.0, 0.95, 0.88),
+  point_energy: float = 100.0,
+  point_color: Tuple[float, float, float] = (1, 1, 1),
   point_shadow_soft_size: float = 0.15,
-  point_location: Tuple[float, float, float] = (0.0, 0.0, 0.5),
-  
-  area_energy: float = 200.0,
+  point_location: Tuple[float, float, float] = (0.0, 0.0, 1.5),
+
+  area_energy: float = 100.0,
   area_color: Tuple[float, float, float] = (1.0, 1.0, 1.0),
   area_size: float = 2.0,
-  area_location: Tuple[float, float, float] = (0.0, -3.0, 2.0),
-  area_rotation: Tuple[float, float, float] = (math.radians(60), 0.0, 0.0),
-  
+  area_location: Tuple[float, float, float] = (0, 0, 1),
+  area_rotation: Tuple[float, float, float] = (0, 0, 0),
+
   sun_energy: float = 2.5,
   sun_angle_degrees: float = 2.0,
   sun_rotation_degrees: Tuple[float, float, float] = (60.0, 0.0, 35.0)
 ) -> None:
-    
+
   # Point light
-  point_data = bpy.data.lights.new(name="IndoorLight", type='POINT')
+  point_data = bpy.data.lights.new(name="PointLight", type='POINT')
   point_data.energy = point_energy
   point_data.color = point_color
   point_data.shadow_soft_size = point_shadow_soft_size
-  point_obj = bpy.data.objects.new(name="IndoorLight", object_data=point_data)
+  point_obj = bpy.data.objects.new(name="PointLight", object_data=point_data)
   point_obj.location = point_location
   bpy.context.collection.objects.link(point_obj)
 

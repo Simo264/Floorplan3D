@@ -1,28 +1,20 @@
 ## Screenshots
 
-![primitives_extraction](screenshots/primitives_extraction.png)
+![draftperson_HousePlan](screenshots/draftperson_HousePlan.png)
 
-![clustering](screenshots/clustering.png)
+![draftperson_HousePlan-render-1](screenshots/draftperson_HousePlan-rendering-1280x720-128-1.png)
 
-![faces_extraction](screenshots/faces_extraction.png)
+![draftperson_HousePlan-render-2](screenshots/draftperson_HousePlan-rendering-1280x720-128-2.png)
 
-![preview_textured_mesh](screenshots/preview_textured_mesh.png)
+![draftperson_HousePlan-render-3](screenshots/draftperson_HousePlan-rendering-1280x720-128-3.png)
 
-![preview_mesh_with_lighting](screenshots/preview_mesh_with_lighting.png)
+![draftperson_HousePlan-render-4](screenshots/draftperson_HousePlan-rendering-1280x720-128-4.png)
 
-![draftperson_Floor_Plan_cycles](screenshots/draftperson_Floor_Plan_cycles.png)
+![pincad_SimpleHousePlan](screenshots/pincad_SimpleHousePlan.png)
 
-![Simple_House_Plan_cycles](screenshots/Simple_House_Plan_cycles.png)
+![pincad_SimpleHousePlan-render-1](screenshots/pincad_SimpleHousePlan-rendering-1280x720-128-1.png)
 
-![Door_Placeholders](screenshots/door_placeholders.png)
-
-![Window_Placeholders](screenshots/window_placeholders.png)
-
-![Door_Assets](screenshots/door_assets.png)
-
-![Door_Window_Assets](screenshots/door_window_assets.png)
-
-![draftperson_with_assets](screenshots/draftperson_with_assets.png)
+![pincad_SimpleHousePlan-render-2](screenshots/pincad_SimpleHousePlan-rendering-1280x720-128-2.png)
 
 ## Building
 

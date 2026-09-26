@@ -2,46 +2,17 @@
   "samples": 128,
   "resolution_x": 1280,
   "resolution_y": 720,
-  "use_denoising" : true,
-  "render_engine": "CYCLES",
-  "output_blender": "out/pincad_SimpleHousePlan.blend",
 
-  "model_path": "out/pincad_SimpleHousePlan.gltf",
-  "opening_placeholders": "out/pincad_SimpleHousePlan_openings.json",
-  "door_asset": "assets/modern_door.glb",
-  "window_asset": "assets/modern_window.glb",
+  "model_path": "out/draftperson_HousePlan.gltf",
+  "opening_placeholders": "out/draftperson_HousePlan_openings.json",
+  "door_asset": "assets/Classical_Door.glb",
+  "window_asset": "assets/Classical_Window.glb",
   "hdri_path": "HDRIs/DayEnvironment_4K.exr",
-  "hdri_intensity": 1.0,
 
   "floor_material": {
-    "albedo": "materials/oak_wood_planks/oak_wood_planks_diff_1k.jpg",
-    "base_color": [0.8, 0.8, 0.8],
-    "normal": "materials/oak_wood_planks/oak_wood_planks_nor_gl_1k.jpg",
-    "normal_strength": 1.5,
-    "roughness": "materials/oak_wood_planks/oak_wood_planks_rough_1k.jpg",
-    "roughness_value": 0.5,
-    "metallic": "",
-    "metallic_value": 0.0,
-    "displacement": "materials/oak_wood_planks/oak_wood_planks_disp_1k.jpg",
-    "disp_scale": 0.05,
-    "ao": "materials/oak_wood_planks/oak_wood_planks_ao_1k.jpg",
-    "ao_mix_factor": 1.0,
-    "arm": ""
-  },
-
-  "wall_and_ceil_material": {
-    "albedo": "materials/plaster_wall/red_plaster_weathered_diff_1k.jpg",
-    "base_color": [0.8, 0.8, 0.8],
-    "normal": "materials/plaster_wall/red_plaster_weathered_nor_gl_1k.jpg",
-    "normal_strength": 1.5,
-    "metallic": "",
-    "metallic_value": 0.0,
-    "roughness": "materials/plaster_wall/red_plaster_weathered_rough_1k.jpg",
-    "roughness_value": 0.5,
-    "displacement": "materials/plaster_wall/red_plaster_weathered_disp_1k.jpg",
-    "disp_scale": 0.05,
-    "ao": "materials/plaster_wall/red_plaster_weathered_ao_1k.jpg",
-    "ao_mix_factor": 1.0,
-    "arm": "materials/plaster_wall/red_plaster_weathered_arm_1k.jpg"
-  }
+     "directory": "materials/patio_tiles"
+   },
+   "wall_and_ceil_material": {
+     "directory": "materials/beige_wall"
+   }
 }
