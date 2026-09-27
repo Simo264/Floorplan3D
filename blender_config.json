@@ -3,16 +3,16 @@
   "resolution_x": 1280,
   "resolution_y": 720,
 
-  "model_path": "out/draftperson_HousePlan.gltf",
-  "opening_placeholders": "out/draftperson_HousePlan_openings.json",
-  "door_asset": "assets/Classical_Door.glb",
-  "window_asset": "assets/Classical_Window.glb",
+  "model_path": "out/pincad_SimpleHousePlan.gltf",
+  "opening_placeholders": "out/pincad_SimpleHousePlan_openings.json",
+  "door_asset": "assets/wooden_door.glb",
+  "window_asset": "assets/modern_window.glb",
   "hdri_path": "HDRIs/DayEnvironment_4K.exr",
 
   "floor_material": {
-     "directory": "materials/patio_tiles"
+     "directory": "materials/walnut_veneer"
    },
    "wall_and_ceil_material": {
-     "directory": "materials/beige_wall"
+     "directory": "materials/hinoki_planks"
    }
 }
