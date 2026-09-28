@@ -18,6 +18,12 @@
 
 ![pincad_SimpleHousePlan-render-3](screenshots/pincad_SimpleHousePlan-rendering-1280x720-128-3.png)
 
+![pincad_4BHKDuplexHousePlan](screenshots/pincad_4BHKDuplexHousePlan.png)
+
+![pincad_4BHKDuplexHousePlan-render-1](screenshots/pincad_4BHKDuplexHousePlan-rendering-1280x720-128-1.png)
+
+![pincad_4BHKDuplexHousePlan-render-2](screenshots/pincad_4BHKDuplexHousePlan-rendering-1280x720-128-2.png)
+
 ## Building
 
 Install Conan package manager with pip:
