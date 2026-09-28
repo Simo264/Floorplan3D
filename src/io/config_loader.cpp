@@ -81,16 +81,12 @@ void Config::validate_config()
     throw std::runtime_error("unit_scale must be > 0");
   if (ceil_height <= 0.0)
     throw std::runtime_error("ceil_height must be > 0");
-  if (door_width <= 0.0)
-    throw std::runtime_error("door_width must be > 0");
   if (door_height <= 0.0)
     throw std::runtime_error("door_height must be > 0");
   if (window_sill_height < 0.0)
     throw std::runtime_error("window_sill_height must be >= 0");
   if (window_height <= 0.0)
     throw std::runtime_error("window_height must be > 0");
-  if (window_width <= 0.0)
-    throw std::runtime_error("window_width must be > 0");
   if (snap_eps <= 0.0)
     throw std::runtime_error("snap_eps must be > 0");
   if (cluster_eps <= 0.0)
@@ -102,15 +98,11 @@ void Config::validate_config()
   if (wall_texture_scaling <= 0.0f)
     throw std::runtime_error("wall_texture_scaling must be > 0");
 
-  if (door_width <= 0.0)
-    throw std::runtime_error("door_width must be > 0");
   if (door_height <= 0.0)
     throw std::runtime_error("door_height must be > 0");
   if (door_height >= ceil_height)
       throw std::runtime_error("door_height must be < ceil_height");
 
-  if (window_width <= 0.0)
-    throw std::runtime_error("window_width must be > 0");
   if (window_height <= 0.0)
     throw std::runtime_error("window_height must be > 0");
   if (window_sill_height < 0.0)

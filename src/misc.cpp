@@ -9,6 +9,48 @@
 #include <glm/gtx/norm.hpp>
 
 #include <print>
+#include <algorithm>
+
+
+i32 remove_duplicate_segments(std::vector<Segment>& segments)
+{
+  auto before = static_cast<i32>(segments.size());
+
+  auto approx_eq = [](double a, double b) -> bool {
+    return std::abs(a - b) <= 1e-3;
+  };
+  auto same_point = [&](glm::dvec2 a, glm::dvec2 b) -> bool {
+    return approx_eq(a.x, b.x) && approx_eq(a.y, b.y);
+  };
+  auto lex_less = [&](glm::dvec2 a, glm::dvec2 b) -> bool {
+    if (approx_eq(a.x, b.x))
+      return a.y < b.y - 1e-3;
+    return a.x < b.x;
+  };
+  auto same_segment = [&](const Segment& a, const Segment& b) -> bool {
+    return same_point(a.start, b.start) && same_point(a.end, b.end);
+  };
+
+  for (auto& s : segments)
+  {
+    if (lex_less(s.end, s.start))
+      std::swap(s.start, s.end);
+  }
+  std::ranges::sort(segments, [&](const Segment& a, const Segment& b) {
+    if (lex_less(a.start, b.start)) return true;
+    if (lex_less(b.start, a.start)) return false;
+    return lex_less(a.end, b.end);
+  });
+  std::ranges::sort(segments, [&](const Segment& a, const Segment& b) -> bool {
+    if (lex_less(a.start, b.start)) return true;
+    if (lex_less(b.start, a.start)) return false;
+    return lex_less(a.end, b.end);
+  });
+
+  auto [first, last] = std::ranges::unique(segments, same_segment);
+  segments.erase(first, last);
+  return before - static_cast<int>(segments.size());
+}
 
 bool are_vectors_parallel(glm::dvec2 v1, glm::dvec2 v2, f64 eps)
 {

@@ -5,6 +5,8 @@
 
 #include <vector>
 
+i32 remove_duplicate_segments(std::vector<Segment>& segments);
+
 bool are_vectors_parallel(glm::dvec2 v1, glm::dvec2 v2, f64 eps = 1e-4);
 
 f64 calculate_signed_area(const std::vector<glm::dvec2>& contour);

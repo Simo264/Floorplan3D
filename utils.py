@@ -170,7 +170,7 @@ def setup_camera(
 
 @typechecked
 def setup_lighting(
-  point_energy: float = 100.0,
+  point_energy: float = 50.0,
   point_color: Tuple[float, float, float] = (1, 1, 1),
   point_shadow_soft_size: float = 0.15,
   point_location: Tuple[float, float, float] = (0.0, 0.0, 1.5),

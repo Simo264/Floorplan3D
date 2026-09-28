@@ -3,11 +3,8 @@
 #include <GLFW/glfw3.h>
 
 #include <format>
-#include <algorithm>
-#include <cstdlib>
 #include <stdexcept>
 #include <vector>
-#include <cstdio>
 #include <print>
 
 #include <glm/ext/vector_float4.hpp>
@@ -28,20 +25,28 @@ ParsingResult parse_dxf(bool verbose, const std::filesystem::path& file, f64 uni
   if (!dxf.read(&parser, false))
     throw std::runtime_error(std::format("Error reading DXF file `{}` (code: {})", file.string(), static_cast<i32>(dxf.getError())));
 
-  auto doors_before = parser.doors.size();
-  parser.remove_duplicate_segments(parser.doors);
-  auto doors_after = parser.doors.size();
-  auto doors_removed = doors_before - doors_after;
+  auto walls_duplicates = remove_duplicate_segments(parser.walls);
+  auto doors_duplicates = remove_duplicate_segments(parser.doors);
+  auto windows_duplicates = remove_duplicate_segments(parser.windows);
+  if(walls_duplicates > 0)
+    std::println("- removed {} duplicate wall segments", walls_duplicates);
+  if(doors_duplicates > 0)
+    std::println("- removed {} duplicate door segments", doors_duplicates);
+  if(windows_duplicates > 0)
+    std::println("- removed {} duplicate window segments", windows_duplicates);
+
+  auto bbox = BoundingBox2D{ parser.walls };
+  std::erase_if(parser.doors, [&bbox](const Segment& s) {
+    return !bbox.contains(s.start) && !bbox.contains(s.end);
+  });
+
   auto total_segments = parser.walls.size() + parser.doors.size() + parser.windows.size();
-
-  if (doors_removed > 0)
-    std::println("- removed {} duplicate door segments", doors_removed);
-
+  auto total_vertices = total_segments * 2;
   std::println("- number of wall segments: {}", parser.walls.size());
   std::println("- number of door segments: {}", parser.doors.size());
   std::println("- number of window segments: {}", parser.windows.size());
   std::println("- total segments: {}", total_segments);
-  std::println("- total vertices: {}", total_segments * 2);
+  std::println("- total vertices: {}", total_vertices);
 
   normalize_segments(unit_scale, parser.walls);
   normalize_segments(unit_scale, parser.doors);

@@ -8,7 +8,7 @@
 
   "window_sill_height": 0.25,
   "window_height": 2.1,
-  "window_width": 2.0,
+  "window_width": 3.0,
 
   "snap_eps": 0.01,
   "cluster_num_samples": 30,

@@ -140,7 +140,7 @@ struct BoundingBox2D
 
   // calculate the area of the bounding box
   f64 calculate_area() const;
-    // Check if a single point is inside the Bounding Box
+  // Check if a single point is inside the Bounding Box
   bool contains(glm::dvec2 p) const;
 
   // Returns the two long sides of the bounding box.

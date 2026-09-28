@@ -10,8 +10,6 @@
 #include <string>
 #include <string_view>
 #include <map>
-#include <algorithm>
-#include <execution>
 
 // =============================
 // Privates
@@ -28,40 +26,6 @@ SegmentLayer DRWParser::classify_layer(std::string_view name)
 // =============================
 // Publics
 // =============================
-
-void DRWParser::remove_duplicate_segments(std::vector<Segment>& segments)
-{
-  auto canonicalize = [](const Segment& s) -> std::pair<glm::dvec2, glm::dvec2> {
-    if (s.start.x < s.end.x || (s.start.x == s.end.x && s.start.y < s.end.y))
-      return {s.start, s.end};
-    return {s.end, s.start};
-  };
-  auto are_segments_equal = [&](const Segment& lhs, const Segment& rhs) -> bool {
-    if (lhs.layer != rhs.layer) return false;
-    auto [l_start, l_end] = canonicalize(lhs);
-    auto [r_start, r_end] = canonicalize(rhs);
-    return l_start == r_start && l_end == r_end;
-  };
-  auto segment_less = [&](const Segment& lhs, const Segment& rhs) -> bool {
-    if (lhs.layer != rhs.layer)
-      return lhs.layer < rhs.layer;
-
-    auto [l_start, l_end] = canonicalize(lhs);
-    auto [r_start, r_end] = canonicalize(rhs);
-
-    if (l_start.x != r_start.x) return l_start.x < r_start.x;
-    if (l_start.y != r_start.y) return l_start.y < r_start.y;
-    if (l_end.x != r_end.x) return l_end.x < r_end.x;
-    return l_end.y < r_end.y;
-  };
-
-  std::sort(std::execution::par, segments.begin(), segments.end(), segment_less);
-
-  auto [first, last] = std::ranges::unique(segments, are_segments_equal);
-
-  segments.erase(first, last);
-}
-
 
 void DRWParser::addLine(const DRW_Line& data)
 {

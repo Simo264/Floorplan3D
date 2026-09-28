@@ -10,7 +10,6 @@ class DRWParser : public DRW_Interface
 public:
   DRWParser(bool verbose) : m_verbose(verbose) {}
 
-
   virtual void addLine(const DRW_Line& data) override;
   virtual void addLWPolyline(const DRW_LWPolyline& data) override;
   virtual void addArc(const DRW_Arc& data) override;
@@ -67,8 +66,6 @@ public:
   virtual void writeDimstyles() override {}
   virtual void writeObjects() override {}
   virtual void writeAppId() override {}
-
-  void remove_duplicate_segments(std::vector<Segment>& segments);
 
   std::vector<Segment> walls, doors, windows;
 private:
