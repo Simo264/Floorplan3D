@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <stdexcept>
+#include <chrono>
 
 #include "dump.hpp"
 #include "types.hpp"
@@ -27,6 +28,8 @@ int main(int argc, char** argv)
   auto config = Config(argv[1]);
   static auto counter = 0;
   std::string output_name;
+
+  auto t0 = std::chrono::steady_clock::now();
 
   // =======================================================
   // Step 1: parsing
@@ -232,9 +235,15 @@ int main(int argc, char** argv)
   export_opening_placeholders(build_result, json_path);
   std::println("- JSON placeholder file: {}", json_path.string());
 
+  std::println("\n=========== Time elapsed ===========\n");
+  auto t1 = std::chrono::steady_clock::now();
+  auto seconds = std::chrono::duration<f64>(t1 - t0).count();
+  std::printf("- Total time elapsed: %.6f s\n", seconds);
+
   // =======================================================
   // Step 8: visualize mesh with openGL
   // =======================================================
+  std::println("\n=========== Visualize mesh ===========\n");
 
   MeshVisualizer visualizer(1024, 768);
   visualizer.camera.eye = { 0.0f, 2.0f, 5.0f };

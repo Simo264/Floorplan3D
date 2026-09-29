@@ -3,16 +3,16 @@
   "resolution_x": 1280,
   "resolution_y": 720,
 
-  "model_path": "out/pincad_4BHKDuplexHousePlan.gltf",
-  "opening_placeholders": "out/pincad_4BHKDuplexHousePlan_openings.json",
+  "model_path": "out/draftperson_HousePlan.gltf",
+  "opening_placeholders": "out/draftperson_HousePlan_openings.json",
   "door_asset": "assets/wooden_door.glb",
   "window_asset": "assets/modern_black_window.glb",
   "hdri_path": "HDRIs/DayEnvironment_4K.exr",
 
   "floor_material": {
-     "directory": "materials/Stone_Quartzite"
+     "directory": "materials/beige_wall"
    },
    "wall_and_ceil_material": {
-     "directory": "materials/plaster_painted"
+     "directory": "materials/patio_tiles"
    }
 }
